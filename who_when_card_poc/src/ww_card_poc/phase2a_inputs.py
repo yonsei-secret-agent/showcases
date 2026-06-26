@@ -5,7 +5,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ww_card_poc.conditions import DEFAULT_CONDITIONS, leakage_flags, render_condition
+from ww_card_poc.conditions import (
+    DEFAULT_CONDITIONS,
+    infer_failure_mode,
+    leakage_flags,
+    render_condition,
+    sanitize_text,
+)
 from ww_card_poc.who_when_io import WhoWhenCase
 
 
@@ -75,6 +81,21 @@ def build_user_prompt(case: WhoWhenCase, condition_text: str) -> str:
     )
 
 
+def _failure_mode(case: WhoWhenCase) -> str:
+    return infer_failure_mode(sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth]))
+
+
+def _mismatched_case(case: WhoWhenCase, cases: list[WhoWhenCase], case_index: int) -> WhoWhenCase:
+    if len(cases) <= 1:
+        return case
+    target_mode = _failure_mode(case)
+    for offset in range(1, len(cases)):
+        candidate = cases[(case_index + offset) % len(cases)]
+        if candidate.case_id != case.case_id and _failure_mode(candidate) != target_mode:
+            return candidate
+    return cases[(case_index + 1) % len(cases)]
+
+
 def build_phase2a_inputs(
     cases: list[WhoWhenCase],
     *,
@@ -83,7 +104,7 @@ def build_phase2a_inputs(
     active_conditions = conditions or DEFAULT_CONDITIONS
     records: list[Phase2AInput] = []
     for case_index, case in enumerate(cases):
-        mismatched_case = cases[(case_index + 1) % len(cases)] if len(cases) > 1 else case
+        mismatched_case = _mismatched_case(case, cases, case_index)
         for condition in active_conditions:
             condition_text, metadata = render_condition(
                 condition,

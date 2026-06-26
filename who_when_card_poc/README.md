@@ -1,12 +1,19 @@
 # Who&When Card PoC
 
-This project currently scaffolds a Who&When-native experiment for testing whether
+This project implements a Who&When-native smoke experiment for testing whether
 attribution-derived runtime Failure Cards reduce recurrence of decisive errors in trace-prefix
 counterfactual repair.
 
-It is not yet a full benchmark runner. The first implementation milestone is a Who&When reality
-check: inspect real annotated traces, confirm that `t*-1` prefix cuts are possible, and verify that
-the native trace-prefix design is supported by the data format.
+The current runner covers:
+
+```text
+Who&When case audit
+Pre-Phase2 no-guidance recurrence pretest
+Failure-prone case selection
+Phase 2A gold-intervention generation
+Blind LLM judgment
+Condition-level and case-level metrics
+```
 
 ## Setup
 
@@ -113,3 +120,60 @@ This writes:
 data/interim/smoke_case_selection.csv
 data/runs/phase2a_smoke_inputs.jsonl
 ```
+
+## Smoke Run
+
+Run the recurrence pretest first. This estimates whether no-guidance regenerations still repeat
+the original decisive error.
+
+```bash
+PYTHONPATH=src python3 -m ww_card_poc.cli build-phase2a-inputs \
+  --limit 15 \
+  --conditions no_guidance \
+  --output data/runs/pre_phase2_recurrence_inputs.jsonl
+
+PYTHONPATH=src python3 -m ww_card_poc.cli run-phase2a \
+  --input data/runs/pre_phase2_recurrence_inputs.jsonl \
+  --output data/runs/pre_phase2_recurrence_generations.jsonl \
+  --repeats 3 \
+  --temperature-mode recurrence
+
+PYTHONPATH=src python3 -m ww_card_poc.cli judge-phase2a \
+  --generations data/runs/pre_phase2_recurrence_generations.jsonl \
+  --output data/judgments/pre_phase2_recurrence_judgments.jsonl
+
+PYTHONPATH=src python3 -m ww_card_poc.cli summarize-phase2a \
+  --judgments data/judgments/pre_phase2_recurrence_judgments.jsonl \
+  --report reports/pre_phase2_recurrence_summary.md \
+  --condition-csv data/interim/pre_phase2_recurrence_condition_metrics.csv \
+  --case-csv data/interim/pre_phase2_recurrence_case_metrics.csv \
+  --json data/interim/pre_phase2_recurrence_condition_metrics.json
+```
+
+Then build the Phase 2A input set from failure-prone no-guidance cases and run the 5-condition
+smoke.
+
+```bash
+PYTHONPATH=src python3 -m ww_card_poc.cli build-phase2a-inputs \
+  --case-metrics data/interim/pre_phase2_recurrence_case_metrics.csv \
+  --limit 10 \
+  --output data/runs/phase2a_failure_prone_inputs.jsonl
+
+PYTHONPATH=src python3 -m ww_card_poc.cli run-phase2a \
+  --input data/runs/phase2a_failure_prone_inputs.jsonl \
+  --output data/runs/phase2a_failure_prone_generations.jsonl
+
+PYTHONPATH=src python3 -m ww_card_poc.cli judge-phase2a \
+  --generations data/runs/phase2a_failure_prone_generations.jsonl \
+  --output data/judgments/phase2a_failure_prone_judgments.jsonl
+
+PYTHONPATH=src python3 -m ww_card_poc.cli summarize-phase2a \
+  --judgments data/judgments/phase2a_failure_prone_judgments.jsonl \
+  --report reports/phase2a_failure_prone_summary.md \
+  --condition-csv data/interim/phase2a_failure_prone_condition_metrics.csv \
+  --case-csv data/interim/phase2a_failure_prone_case_metrics.csv \
+  --json data/interim/phase2a_failure_prone_condition_metrics.json
+```
+
+The runner appends JSONL records and resumes by default. Use `--no-resume` only when intentionally
+writing a fresh output path or rerunning a condition into a separate file.

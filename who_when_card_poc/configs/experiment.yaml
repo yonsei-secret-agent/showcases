@@ -19,6 +19,7 @@ phases:
 smoke:
   candidate_cases: 15
   no_guidance_repeats: 3
+  failure_prone_recurrence_threshold: 0.4
   main_cases: 10
   candidate_filter:
     dataset_type: algorithm_generated

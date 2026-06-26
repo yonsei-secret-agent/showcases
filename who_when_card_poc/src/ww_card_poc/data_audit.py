@@ -4,6 +4,7 @@ from collections import Counter
 import csv
 from pathlib import Path
 
+from ww_card_poc.conditions import infer_failure_mode, sanitize_text
 from ww_card_poc.who_when_io import WhoWhenCase, case_index_row, load_cases, phase2a_status
 
 
@@ -28,9 +29,75 @@ CASE_INDEX_FIELDS = [
     "has_mistake_reason",
     "system_prompt_agent_count",
     "history_agent_count",
+    "candidate_failure_mode",
+    "actionability_label",
+    "replayability_label",
+    "no_guidance_recurrence_rate",
+    "main_set_eligible",
     "phase2a_status",
     "phase2a_note",
 ]
+
+
+HIGH_ACTIONABILITY_MODES = {
+    "unsupported assumption or fabricated intermediate data",
+    "unverified or inaccurate factual claim",
+    "incomplete handling of task constraints or data cases",
+    "irrelevant action or navigation drift",
+    "premature finalization before sufficient verification",
+}
+
+
+def classify_failure_mode(case: WhoWhenCase) -> str:
+    reason = sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth])
+    return infer_failure_mode(reason)
+
+
+def actionability_label(case: WhoWhenCase, failure_mode: str) -> str:
+    status, _ = phase2a_status(case)
+    if status == "blocker":
+        return "blocked"
+    if not case.mistake_reason:
+        return "needs_manual_review"
+    if failure_mode in HIGH_ACTIONABILITY_MODES:
+        return "likely_actionable"
+    if status.startswith("warning"):
+        return "needs_manual_review"
+    return "uncertain_actionability"
+
+
+def replayability_label(case: WhoWhenCase) -> str:
+    status, _ = phase2a_status(case)
+    if status == "blocker":
+        return "not_replayable"
+    if status == "candidate_initial_step":
+        return "task_role_only_replay"
+    if case.dataset_type == "algorithm_generated" and case.system_prompt:
+        return "trace_prefix_replayable"
+    if case.dataset_type == "hand_crafted":
+        return "trace_prefix_no_system_prompt"
+    return "trace_prefix_partial"
+
+
+def enriched_case_index_row(case: WhoWhenCase) -> dict[str, str | int | bool]:
+    row = case_index_row(case)
+    failure_mode = classify_failure_mode(case)
+    actionable = actionability_label(case, failure_mode)
+    replayable = replayability_label(case)
+    row.update(
+        {
+            "candidate_failure_mode": failure_mode,
+            "actionability_label": actionable,
+            "replayability_label": replayable,
+            "no_guidance_recurrence_rate": "",
+            "main_set_eligible": (
+                phase2a_status(case)[0] == "candidate"
+                and actionable == "likely_actionable"
+                and replayable == "trace_prefix_replayable"
+            ),
+        }
+    )
+    return row
 
 
 def write_case_index(cases: list[WhoWhenCase], output_path: Path) -> None:
@@ -39,7 +106,7 @@ def write_case_index(cases: list[WhoWhenCase], output_path: Path) -> None:
         writer = csv.DictWriter(handle, fieldnames=CASE_INDEX_FIELDS)
         writer.writeheader()
         for case in cases:
-            writer.writerow(case_index_row(case))
+            writer.writerow(enriched_case_index_row(case))
 
 
 def _status_counts(cases: list[WhoWhenCase]) -> Counter[str]:
@@ -94,6 +161,10 @@ def render_data_audit_report(cases: list[WhoWhenCase], *, sample_count: int = 3)
     matched_agents, mismatched_agents = _bool_count(cases, "mistake_agent_matches_step")
     empty_prefix = sum(1 for case in cases if len(case.prefix_before_mistake()) == 0)
     non_empty_prefix = len(cases) - empty_prefix
+    actionability_counts = Counter(
+        actionability_label(case, classify_failure_mode(case)) for case in cases
+    )
+    replayability_counts = Counter(replayability_label(case) for case in cases)
 
     lines = [
         "# Who&When Data Audit",
@@ -115,6 +186,14 @@ def render_data_audit_report(cases: list[WhoWhenCase], *, sample_count: int = 3)
     ]
     for status, count in sorted(status_counts.items()):
         lines.append(f"- {status}: `{count}`")
+
+    lines.extend(["", "## Actionability Labels", ""])
+    for label, count in sorted(actionability_counts.items()):
+        lines.append(f"- {label}: `{count}`")
+
+    lines.extend(["", "## Replayability Labels", ""])
+    for label, count in sorted(replayability_counts.items()):
+        lines.append(f"- {label}: `{count}`")
 
     lines.extend(
         [

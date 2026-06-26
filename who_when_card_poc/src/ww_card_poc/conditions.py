@@ -21,6 +21,8 @@ STEP_PATTERNS = [
     re.compile(r"\bmistake_step\b", re.IGNORECASE),
 ]
 
+TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+")
+
 
 @dataclass(frozen=True)
 class RuntimeCard:
@@ -164,6 +166,7 @@ def build_runtime_card(case: WhoWhenCase) -> RuntimeCard:
 
 def leakage_flags(text: str, *, case: WhoWhenCase) -> list[str]:
     flags: list[str] = []
+    normalized_text = " ".join(text.lower().split())
     for pattern in STEP_PATTERNS:
         if pattern.search(text):
             flags.append("mentions_exact_step_or_hidden_step_marker")
@@ -172,8 +175,27 @@ def leakage_flags(text: str, *, case: WhoWhenCase) -> list[str]:
         flags.append("future_failure_wording")
     if case.ground_truth and case.ground_truth in text:
         flags.append("contains_ground_truth")
-    if case.content_at(case.mistake_step or -1) and case.content_at(case.mistake_step or -1) in text:
+    failed_action = case.content_at(case.mistake_step or -1)
+    normalized_failed_action = " ".join(failed_action.lower().split())
+    if failed_action and normalized_failed_action and normalized_failed_action in normalized_text:
         flags.append("quotes_original_failed_action")
+    failed_tokens = TOKEN_RE.findall(normalized_failed_action)
+    normalized_text_tokens = TOKEN_RE.findall(normalized_text)
+    text_token_set = set(normalized_text_tokens)
+    if len(failed_tokens) >= 12 and text_token_set:
+        overlap = sum(1 for token in failed_tokens if token in text_token_set) / len(failed_tokens)
+        if overlap >= 0.45:
+            flags.append("high_token_overlap_with_original_failed_action")
+    if len(failed_tokens) >= 8:
+        text_ngrams = {
+            tuple(normalized_text_tokens[idx : idx + 6])
+            for idx in range(max(0, len(normalized_text_tokens) - 5))
+        }
+        failed_ngrams = {
+            tuple(failed_tokens[idx : idx + 6]) for idx in range(max(0, len(failed_tokens) - 5))
+        }
+        if text_ngrams & failed_ngrams:
+            flags.append("shared_long_phrase_with_original_failed_action")
     return flags
 
 
