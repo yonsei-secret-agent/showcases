@@ -99,3 +99,17 @@ mistake_step >= 2
 phase2a_status = candidate
 warnings excluded
 ```
+
+Build API-free smoke inputs before any model calls:
+
+```bash
+PYTHONPATH=src python3 -m ww_card_poc.cli select-smoke-cases
+PYTHONPATH=src python3 -m ww_card_poc.cli build-phase2a-inputs
+```
+
+This writes:
+
+```text
+data/interim/smoke_case_selection.csv
+data/runs/phase2a_smoke_inputs.jsonl
+```
