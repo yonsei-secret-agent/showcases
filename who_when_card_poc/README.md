@@ -1,0 +1,101 @@
+# Who&When Card PoC
+
+This project currently scaffolds a Who&When-native experiment for testing whether
+attribution-derived runtime Failure Cards reduce recurrence of decisive errors in trace-prefix
+counterfactual repair.
+
+It is not yet a full benchmark runner. The first implementation milestone is a Who&When reality
+check: inspect real annotated traces, confirm that `t*-1` prefix cuts are possible, and verify that
+the native trace-prefix design is supported by the data format.
+
+## Setup
+
+1. Fill API keys in `.env`.
+2. Keep the first smoke run on fixed model slugs; do not use auto-routed models.
+3. Run config checks before adding Who&When data.
+
+```bash
+cd who_when_card_poc
+PYTHONPATH=src python3 -m ww_card_poc.cli check-config
+PYTHONPATH=src python3 -m ww_card_poc.cli show-experiment
+```
+
+`check-config` requires the active API key. `show-experiment` only validates the experiment YAML.
+
+## Reality Check
+
+After cloning or copying Who&When into `third_party/Agents_Failure_Attribution`, run:
+
+```bash
+PYTHONPATH=src python3 -m ww_card_poc.cli reality-check --output reports/who_when_reality_check.md
+PYTHONPATH=src python3 -m ww_card_poc.cli data-audit
+```
+
+The report is intentionally not a final verdict. It lists candidate data/code files and the manual
+questions that must be answered from 2-3 real annotated traces:
+
+```text
+Can we locate gold who/when/why?
+Are trajectories ordered and agent-attributed?
+Can we cut at t*-1 with enough context?
+Is the responsible agent role recoverable?
+Is the decisive step local enough for next-action regeneration?
+```
+
+`data-audit` parses all local Who&When JSON files and writes:
+
+```text
+data/interim/who_when_case_index.csv
+reports/who_when_data_audit.md
+```
+
+The case index is the first source for selecting Phase 2A candidates. Cases marked
+`candidate_initial_step` are usable but need prompts built from the task and role context because
+the decisive error is at step 0. Cases marked `warning` need manual inspection before inclusion.
+
+## Default Backend
+
+The first smoke run is configured for OpenRouter using:
+
+```text
+generation: openai/gpt-4o-mini-2024-07-18
+card: openai/gpt-4o
+judge: openai/gpt-4o
+attribution: openai/gpt-4o
+```
+
+The generation model is intentionally cheaper and weaker for smoke tests so no-guidance
+recurrence remains observable. This is not a claim that mini matches the original Who&When trace
+generation model. Runtime card generation and future attribution-method reproduction use GPT-4o
+because they define the oracle card quality and should not be bottlenecked by a weak offline model.
+
+OpenAI direct can be enabled by setting:
+
+```text
+MODEL_BACKEND=openai
+```
+
+## Current Scope
+
+Initial implementation target:
+
+```text
+Phase 0: Who&When data audit
+Pre-Phase 2: no-guidance recurrence pretest
+Phase 2A: gold-intervention trace-prefix repair smoke
+```
+
+Expensive Who&When method reproduction is intentionally off by default:
+
+```text
+phase0_method_reproduction: false
+```
+
+The conservative first smoke set should be selected from:
+
+```text
+dataset_type = algorithm_generated
+mistake_step >= 2
+phase2a_status = candidate
+warnings excluded
+```

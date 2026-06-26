@@ -1,0 +1,19 @@
+[project]
+name = "who-when-card-poc"
+version = "0.1.0"
+description = "Who&When-native Failure Card utility PoC"
+requires-python = ">=3.10"
+dependencies = [
+  "openai>=1.0.0",
+  "pydantic>=2.0.0",
+  "pyyaml>=6.0.0",
+]
+
+[project.scripts]
+ww-card-poc = "ww_card_poc.cli:main"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

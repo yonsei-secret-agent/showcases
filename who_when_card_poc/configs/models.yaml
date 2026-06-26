@@ -1,0 +1,25 @@
+backend: ${MODEL_BACKEND}
+
+models:
+  generation: ${GENERATION_MODEL}
+  card: ${CARD_MODEL}
+  judge: ${JUDGE_MODEL}
+  attribution: ${ATTRIBUTION_MODEL}
+
+openrouter:
+  base_url: ${OPENROUTER_BASE_URL}
+  provider_order:
+    - ${OPENROUTER_PROVIDER_ORDER}
+  allow_fallbacks: ${OPENROUTER_ALLOW_FALLBACKS}
+  http_referer: ${OPENROUTER_HTTP_REFERER}
+  app_title: ${OPENROUTER_APP_TITLE}
+
+openai:
+  base_url: ${OPENAI_BASE_URL}
+
+runtime:
+  generation_temperature: ${GENERATION_TEMPERATURE}
+  recurrence_temperature: ${RECURRENCE_TEMPERATURE}
+  judge_temperature: ${JUDGE_TEMPERATURE}
+  card_temperature: ${CARD_TEMPERATURE}
+  max_output_tokens: ${MAX_OUTPUT_TOKENS}
