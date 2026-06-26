@@ -1,5 +1,11 @@
 # Experiment 2 Plan: Specificity Gate to Reusable Failure Memory
 
+This is the detailed companion plan. The canonical execution doc is:
+
+```text
+docs/experiment2.md
+```
+
 ## North Star
 
 The research goal is not merely to show that an extra prompt helps.
@@ -71,12 +77,16 @@ Level 2. Cross-trace transfer
   Tests whether a lesson from one failed trace helps a held-out similar failure.
   This is the first real reusable-memory signal.
 
-Level 3. Predicted attribution utility
-  Tests whether all_at_once / step_by_step / binary_search predicted attributions
-  generate useful cards.
+Level 3. Predicted card content utility
+  Keeps gold who/when fixed and tests whether all_at_once / step_by_step / binary_search
+  predicted why/card content is useful.
 
 Level 4. Closed-loop self-improving agent
-  Agent fails -> attributes -> stores card -> retrieves card -> retries or solves held-out tasks.
+  Built only after transfer beats coarse/generic baselines.
+  First test oracle memory in fail -> attribute -> card memory -> retry / held-out improvement.
+
+Level 5. Predicted intervention utility
+  Tests predicted who/when and therefore where and to whom the system should inject memory.
 ```
 
 Experiment 2 covers Levels 1 and a small probe for Level 2.
@@ -155,8 +165,8 @@ no_guidance:
   The shared base prompt must not say this is a failed trajectory.
 
 coarse_reflection:
-  Reflexion-style coarse prompt. It says the previous attempt failed and asks the agent to
-  reflect/avoid repeating likely mistakes, but it does not provide who/when/why attribution.
+  Reflexion-style coarse prompt. It says this trajectory may be heading toward a mistake and asks
+  the agent to reflect before the next action, but it does not provide who/when/why attribution.
 
 broad_verification_card:
   Format-matched Runtime Failure Card with generic content:
@@ -226,6 +236,19 @@ The real gate is the powered run:
 ≈ 90 judgments per condition
 paired bootstrap CI or paired permutation test
 ```
+
+Use case-level clustered bootstrap:
+
+```text
+resample cases, not individual generations
+aggregate attempts within each case before computing paired deltas
+```
+
+Attempts from the same case are correlated. Treating 90 condition records as independent would
+underestimate uncertainty.
+
+Also, n=30 cases may be underpowered for a +10 percentage point effect. A small positive nudge_gap
+with CI crossing zero should be treated as inconclusive, not automatically no-go.
 
 Primary contrast:
 
@@ -312,7 +335,8 @@ no_guidance:
   No failure signal.
 
 coarse_reflection:
-  Previous attempt failed, but no who/when/why attribution.
+  This trajectory may be heading toward a mistake; reflect before the next action.
+  No who/when/why attribution.
 
 oracle_specific_card:
   Gold attribution-derived specific runtime memory.
@@ -357,6 +381,26 @@ Forbidden information:
 - "you failed at step N" or future-failure wording
 - benchmark labels visible to the agent
 ```
+
+Leakage must be blocked, not merely logged.
+
+```text
+exact-match leakage flag:
+  regenerate or drop the card
+  never use it as agent-visible guidance
+
+secondary LLM leakage check:
+  run paraphrase leakage checks for oracle_specific_card
+  inspect whether the card indirectly reveals the gold answer, original failed action,
+  hidden step information, or benchmark labels
+
+human/secondary audit:
+  prioritize oracle_specific_card in the smoke audit
+  regenerate or exclude suspicious cards
+```
+
+If oracle cards leak answers or hidden future-failure information, specificity conclusions are
+invalid.
 
 Example pattern:
 
@@ -462,6 +506,13 @@ history_len
 role_reconstruction_method
 ```
 
+Per-mode metrics are descriptive by default. With 30 cases spread across 5-6 buckets, each bucket is
+too small for inferential claims. If per-mode inference is required, use fewer buckets, for example:
+
+```text
+3 major modes × about 10 cases per mode
+```
+
 ## Judge Changes
 
 The judge must distinguish intention from concrete action.
@@ -485,11 +536,16 @@ rationale: short string
 Repair success should require:
 
 ```text
-task_progress == true
 avoids_decisive_error == true
 negative_transfer == false
 and, when the failure mode requires verification, verification_is_concrete == true
+and the candidate performs a concrete relevant next action
 ```
+
+Treat `task_progress` as a supporting field. In a single next-action evaluation, progress is noisy:
+requesting a missing source, asking a necessary clarification, checking constraints, or routing to
+the correct agent/tool may be a valid repair action even if it does not directly advance the final
+answer.
 
 Do not count a candidate as repaired if it only says:
 
@@ -638,6 +694,29 @@ Use same-mode source-target pairs:
 ```text
 source_failure_mode == target_failure_mode
 source_case_id != target_case_id
+```
+
+This is an oracle retrieval upper bound: the experiment uses gold failure-mode labels to choose
+source memories. It does not prove deployable memory retrieval.
+
+Allowed claim:
+
+```text
+Under oracle retrieval of same-mode source memories, source cards transfer to held-out target traces.
+```
+
+Do not claim:
+
+```text
+The agent can retrieve the right failure memory by itself.
+```
+
+Label-free retrieval is a separate experiment:
+
+```text
+embedding retrieval
+failure signature matching
+predicted failure-mode classifier
 ```
 
 And mismatched controls:

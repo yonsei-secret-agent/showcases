@@ -12,6 +12,16 @@ Experiment 2는 아직 실행 전이다.
 
 이 문서는 실행자가 바로 구현할 수 있도록 목표, 질문, 조건, 관찰 항목, 판정 기준, 결과 기록 템플릿을 정리한다.
 
+문서 역할:
+
+```text
+canonical execution doc:
+  docs/experiment2.md
+
+detailed companion / rationale:
+  docs/experiment_2_specificity_and_transfer_plan.md
+```
+
 ## 실험 목표
 
 Experiment 2의 목표는 oracle card 성능을 더 높이는 것이 아니다.
@@ -190,7 +200,8 @@ no_guidance:
 
 coarse_reflection:
   Reflexion 스타일 coarse prompt.
-  이전 시도가 실패했다는 정보는 주지만 who/when/why attribution은 주지 않음.
+  현재 trajectory가 실수로 향하고 있을 수 있다는 coarse signal만 제공.
+  who/when/why attribution은 주지 않음.
 
 broad_verification_card:
   Runtime Failure Card 형식은 맞추되 내용은 case-무관 generic verification nudge.
@@ -290,6 +301,24 @@ Applicable when:
 - benchmark label
 ```
 
+Leakage는 기록만 해서는 안 되고 차단해야 한다.
+
+```text
+exact-match leakage flag:
+  regenerate 또는 drop
+  agent-visible card로 사용 금지
+
+secondary LLM leakage check:
+  oracle_specific_card에는 paraphrase leakage check를 추가
+  gold answer, original failed action, hidden step information을 우회적으로 암시하는지 검사
+
+human/secondary audit:
+  smoke 단계에서는 oracle_specific_card를 우선 감사
+  leakage 의심 case는 결과에서 제외하거나 카드를 재생성
+```
+
+이 규칙을 지키지 않으면 oracle 성능이 attribution specificity가 아니라 정답/실패 정보 누출 때문일 수 있다.
+
 ### broad_verification_card
 
 목표:
@@ -381,6 +410,19 @@ history_len
 role_reconstruction_method
 ```
 
+주의:
+
+```text
+30 cases를 5-6 failure-mode bucket으로 나누면 bucket당 case 수가 작다.
+따라서 per-mode breakdown은 기본적으로 descriptive / hypothesis-generating으로만 해석한다.
+```
+
+failure-mode별 inferential claim이 필요하면 다음처럼 설계를 바꾼다.
+
+```text
+3 major modes × about 10 cases per mode
+```
+
 ## Judge 변경
 
 Experiment 2의 judge는 의도 표명과 구체 행동을 분리해야 한다.
@@ -404,11 +446,13 @@ rationale: short string
 repair_success 조건:
 
 ```text
-task_progress == true
 avoids_decisive_error == true
 negative_transfer == false
 and, when verification is required, verification_is_concrete == true
+and the candidate performs a concrete relevant next action
 ```
+
+`task_progress`는 supporting field로 기록한다. single next action 하나만 보는 2A에서는 progress 판정이 noisy할 수 있으므로, 필요한 source request, clarification, constraint checklist, routing action처럼 즉시 문제를 막는 행동은 final answer를 직접 진전시키지 않더라도 repair 후보가 될 수 있다.
 
 다음과 같은 답변은 성공으로 세지 않는다.
 
@@ -532,7 +576,17 @@ powered run target:
 × 6 conditions
 × 3 attempts
 ≈ 90 judgments per condition
-paired bootstrap CI 또는 paired permutation test 포함
+case-level clustered paired bootstrap CI 또는 paired permutation test 포함
+```
+
+bootstrap은 generation record 90개를 독립 표본처럼 resample하면 안 된다. 같은 case 안의 attempts는 상관되어 있으므로, case를 resample하고 case 안 attempt 평균을 사용한다.
+
+또한 n=30 cases에서 `nudge_gap >= +10pp`의 CI 하한이 0보다 크지 않을 수 있다. 이 경우가 자동 no-go는 아니다.
+
+```text
+small positive gap + wide CI:
+  inconclusive
+  increase n 또는 condition 수 축소 후 powered run 재설계
 ```
 
 Primary contrast:
@@ -652,6 +706,29 @@ pairing:
 ```text
 source_failure_mode == target_failure_mode
 source_case_id != target_case_id
+```
+
+이 pairing은 gold failure-mode label로 source card를 고르는 **oracle retrieval upper bound**다. 실제 배포 환경에서 어떤 memory를 꺼낼지는 아직 해결하지 않는다.
+
+따라서 2B 결과는 다음처럼 표현해야 한다.
+
+```text
+Under oracle retrieval of same-mode source memories, source cards transfer to held-out target traces.
+```
+
+다음 표현은 피한다.
+
+```text
+The agent can retrieve the right failure memory by itself.
+```
+
+label-free retrieval은 별도 과제다.
+
+```text
+future retrieval variants:
+  embedding retrieval
+  failure signature matching
+  predicted failure-mode classifier
 ```
 
 mismatch:
