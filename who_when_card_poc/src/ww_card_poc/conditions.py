@@ -77,29 +77,89 @@ def infer_failure_mode(reason: str) -> str:
     return "decisive reasoning or execution error"
 
 
+def runtime_guidance_for_mode(failure_mode: str) -> RuntimeCard:
+    if failure_mode == "unsupported assumption or fabricated intermediate data":
+        return RuntimeCard(
+            failure_mode=failure_mode,
+            trigger_pattern=(
+                "The next action would introduce data, examples, measurements, or factual claims "
+                "that were not obtained from an available source or computation."
+            ),
+            do=(
+                "Ground the next action in retrieved evidence, a provided file, or an explicit "
+                "calculation. If evidence is unavailable, say what must be obtained next."
+            ),
+            do_not="Do not invent placeholder data or proceed with simulated values.",
+            check_before_next_action=(
+                "Identify the source or computation supporting each factual value before using it."
+            ),
+            applicable_when="Use this before providing factual data or derived answers.",
+        )
+    if failure_mode == "unverified or inaccurate factual claim":
+        return RuntimeCard(
+            failure_mode=failure_mode,
+            trigger_pattern=(
+                "The next action would pass along a factual claim, citation, price, title, date, "
+                "rating, or availability statement that later agents may trust."
+            ),
+            do="Verify the claim against the relevant source or explicitly mark it as unverified.",
+            do_not="Do not hand off or finalize factual claims without a verification step.",
+            check_before_next_action=(
+                "State the evidence used for the claim and whether it satisfies the task constraints."
+            ),
+            applicable_when="Use this before making or relaying factual assertions.",
+        )
+    if failure_mode == "incomplete handling of task constraints or data cases":
+        return RuntimeCard(
+            failure_mode=failure_mode,
+            trigger_pattern=(
+                "The next action uses a simplified rule, parser, or checklist that may miss edge "
+                "cases in the user request or data."
+            ),
+            do="Check all stated constraints and edge cases before computing or handing off results.",
+            do_not="Do not assume the first obvious parsing or filtering rule covers every row or case.",
+            check_before_next_action=(
+                "List the constraints being applied and confirm that the next action handles each one."
+            ),
+            applicable_when="Use this before data extraction, filtering, or constraint-based counting.",
+        )
+    if failure_mode == "irrelevant action or navigation drift":
+        return RuntimeCard(
+            failure_mode=failure_mode,
+            trigger_pattern=(
+                "The next action would follow a page, link, tool result, or subtask that is not "
+                "directly tied to the original request."
+            ),
+            do="Re-anchor on the original task and choose the next action that directly resolves it.",
+            do_not="Do not continue browsing or acting on irrelevant pages, ads, or tangential results.",
+            check_before_next_action=(
+                "Explain how the next action advances a specific unmet requirement from the task."
+            ),
+            applicable_when="Use this during web navigation, tool use, and multi-step search.",
+        )
+    if failure_mode == "premature finalization before sufficient verification":
+        return RuntimeCard(
+            failure_mode=failure_mode,
+            trigger_pattern="The next action would conclude or terminate before required checks are done.",
+            do="Perform the missing verification or explicitly request the information needed.",
+            do_not="Do not finalize while key constraints, evidence, or calculations remain unchecked.",
+            check_before_next_action="Name the remaining verification step before any final answer.",
+            applicable_when="Use this before final answers, termination, or handoff completion.",
+        )
+    return RuntimeCard(
+        failure_mode=failure_mode,
+        trigger_pattern="The next action may become the decisive point that propagates an error.",
+        do="Pause and verify the action against the original task, available evidence, and role duties.",
+        do_not="Do not proceed if the action relies on an unchecked assumption.",
+        check_before_next_action="State the evidence and constraint check supporting the next action.",
+        applicable_when="Use this before any action that other agents will rely on.",
+    )
+
+
 def build_runtime_card(case: WhoWhenCase) -> RuntimeCard:
     reason = sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth])
     failure_mode = infer_failure_mode(reason)
-    return RuntimeCard(
-        failure_mode=failure_mode,
-        trigger_pattern=reason or "The next action may carry forward an unverified assumption.",
-        do=(
-            "Before acting, verify the relevant evidence, constraints, and intermediate result "
-            "against the original task."
-        ),
-        do_not=(
-            "Do not proceed with assumed, simulated, or unverified information when the task "
-            "requires grounded evidence or exact computation."
-        ),
-        check_before_next_action=(
-            "State what evidence or computation supports the next action, and if it is missing, "
-            "request or obtain it before continuing."
-        ),
-        applicable_when=(
-            "Use this when the next response would introduce data, facts, tool results, or a "
-            "decision that later agents may rely on."
-        ),
-    )
+    return runtime_guidance_for_mode(failure_mode)
 
 
 def leakage_flags(text: str, *, case: WhoWhenCase) -> list[str]:

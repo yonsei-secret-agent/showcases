@@ -167,6 +167,8 @@ class Settings:
             errors.append(f"Missing API key for active backend: {self.api.backend}.")
         if not self.models.generation_model:
             errors.append("GENERATION_MODEL is required.")
+        if not self.models.card_model:
+            errors.append("CARD_MODEL is required.")
         if not self.models.judge_model:
             errors.append("JUDGE_MODEL is required.")
         if not self.models.attribution_model:
@@ -180,10 +182,10 @@ def load_settings(*, dotenv_path: Path | None = None, override_env: bool = False
     load_dotenv(dotenv_path, override=override_env)
     root = PROJECT_ROOT
     model_config = _load_yaml(root / "configs" / "models.yaml")
-    models_config = model_config.get("models", {})
-    runtime_config = model_config.get("runtime", {})
-    openrouter_config = model_config.get("openrouter", {})
-    openai_config = model_config.get("openai", {})
+    models_config = model_config.get("models") or {}
+    runtime_config = model_config.get("runtime") or {}
+    openrouter_config = model_config.get("openrouter") or {}
+    openai_config = model_config.get("openai") or {}
     provider_order = openrouter_config.get("provider_order", ["OpenAI"])
     if isinstance(provider_order, list):
         provider_order_value = ",".join(str(item) for item in provider_order if item)

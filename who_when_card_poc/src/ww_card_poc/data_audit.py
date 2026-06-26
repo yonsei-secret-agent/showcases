@@ -20,6 +20,7 @@ CASE_INDEX_FIELDS = [
     "mistake_entry_base_agent",
     "mistake_entry_directed_target",
     "mistake_agent_matches_step",
+    "mistake_agent_is_directed_target",
     "prefix_len",
     "prefix_empty",
     "has_question",

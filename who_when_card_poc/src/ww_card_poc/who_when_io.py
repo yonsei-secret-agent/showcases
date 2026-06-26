@@ -95,12 +95,19 @@ class WhoWhenCase:
 
     def prefix_before_mistake(self) -> list[dict[str, Any]]:
         step = self.mistake_step
-        if step is None or step < 0:
+        if step is None or step < 0 or step >= self.history_len:
             return []
         return self.history[:step]
 
     def distinct_history_agents(self) -> list[str]:
-        agents = {str(entry.get("name") or entry.get("role") or "") for entry in self.history}
+        agents: set[str] = set()
+        for idx in range(self.history_len):
+            base_agent = self.base_agent_at(idx)
+            directed_target = self.directed_target_at(idx)
+            if base_agent:
+                agents.add(base_agent)
+            if directed_target:
+                agents.add(directed_target)
         return sorted(agent for agent in agents if agent)
 
     def system_prompt_agents(self) -> list[str]:
@@ -114,12 +121,13 @@ class WhoWhenCase:
         step = self.mistake_step
         if step is None:
             return False
-        labels = {
-            self.agent_at(step),
-            self.base_agent_at(step),
-            self.directed_target_at(step),
-        }
-        return self.mistake_agent in labels
+        return self.mistake_agent in {self.agent_at(step), self.base_agent_at(step)}
+
+    def mistake_agent_is_directed_target(self) -> bool:
+        step = self.mistake_step
+        if step is None:
+            return False
+        return self.mistake_agent == self.directed_target_at(step)
 
 
 def discover_case_files(repo_path: Path) -> list[tuple[str, Path]]:
@@ -158,6 +166,10 @@ def phase2a_status(case: WhoWhenCase) -> tuple[str, str]:
     if not case.mistake_agent:
         return "blocker", "mistake_agent is missing"
     if not case.mistake_agent_matches_step():
+        if case.mistake_agent_is_directed_target():
+            return "warning_directed_target", (
+                "mistake_agent is the directed recipient, not the logged speaker at mistake_step"
+            )
         return "warning", "mistake_agent does not match agent at mistake_step"
     if case.mistake_step == 0:
         return "candidate_initial_step", "prefix is empty because decisive error is step 0"
@@ -182,6 +194,7 @@ def case_index_row(case: WhoWhenCase) -> dict[str, str | int | bool]:
         "mistake_entry_base_agent": case.base_agent_at(step) if step is not None else "",
         "mistake_entry_directed_target": case.directed_target_at(step) if step is not None else "",
         "mistake_agent_matches_step": case.mistake_agent_matches_step(),
+        "mistake_agent_is_directed_target": case.mistake_agent_is_directed_target(),
         "prefix_len": prefix_len,
         "prefix_empty": prefix_len == 0,
         "has_question": bool(case.question),

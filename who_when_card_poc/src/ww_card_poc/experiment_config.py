@@ -30,16 +30,17 @@ class ExperimentConfig:
 
     @property
     def name(self) -> str:
-        return str(self.raw.get("experiment", {}).get("name", "unnamed"))
+        experiment = self.raw.get("experiment") or {}
+        return str(experiment.get("name", "unnamed"))
 
     @property
     def phases(self) -> dict[str, bool]:
-        phases = self.raw.get("phases", {})
+        phases = self.raw.get("phases") or {}
         return {str(key): bool(value) for key, value in phases.items()}
 
     @property
     def smoke(self) -> dict[str, Any]:
-        return dict(self.raw.get("smoke", {}))
+        return dict(self.raw.get("smoke") or {})
 
     def validate(self) -> list[str]:
         errors: list[str] = []
