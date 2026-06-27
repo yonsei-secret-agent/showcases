@@ -62,6 +62,33 @@ class BatchRunnerTests(unittest.TestCase):
         self.assertEqual(len(second), 1)
         self.assertEqual(second[0].status, "skipped")
 
+    def test_run_manifest_calls_runner_with_keyword_output_dir(self):
+        manifest = ExperimentManifest(
+            experiment_id="exp5_3",
+            domain="retail",
+            agent_model="gpt-4.1-mini",
+            user_model="gpt-4.1-mini",
+            task_ids=["2"],
+            seeds=[401],
+            conditions=[ExperimentCondition(name="no_memory", runtime_memory="")],
+        )
+
+        def fake_single_run(spec, *, output_dir):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            result_path = output_dir / "results.json"
+            result_path.write_text(json.dumps({"simulations": []}))
+            return result_path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            results = run_manifest(
+                manifest,
+                output_root=Path(tmp),
+                single_run=fake_single_run,
+            )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].status, "ran")
+
 
 if __name__ == "__main__":
     unittest.main()

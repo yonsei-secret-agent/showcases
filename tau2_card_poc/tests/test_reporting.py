@@ -6,7 +6,9 @@ from pathlib import Path
 from tau2_card_poc.reporting import (
     collect_experiment_records,
     condition_summary,
+    paired_condition_summary,
     task_stability_summary,
+    write_paired_condition_summary_csv,
     write_condition_summary_csv,
 )
 
@@ -102,6 +104,43 @@ class ReportingTests(unittest.TestCase):
 
         self.assertIn("condition,attempts,successes,success_rate,mean_reward", text)
         self.assertIn("oracle,1,1,1.0000,1.0000", text)
+
+    def test_summarizes_paired_rescue_against_baseline(self):
+        records = [
+            _record("2", "no_memory", 401, 0.0),
+            _record("2", "oracle", 401, 1.0),
+            _record("3", "no_memory", 401, 1.0),
+            _record("3", "oracle", 401, 0.0),
+            _record("4", "no_memory", 401, 0.0),
+            _record("4", "oracle", 401, 0.0),
+        ]
+
+        paired = paired_condition_summary(records, baseline_condition="no_memory")
+
+        self.assertEqual(paired["oracle"].paired_attempts, 3)
+        self.assertEqual(paired["oracle"].baseline_successes, 1)
+        self.assertEqual(paired["oracle"].condition_successes, 1)
+        self.assertEqual(paired["oracle"].paired_rescues, 1)
+        self.assertEqual(paired["oracle"].paired_regressions, 1)
+        self.assertAlmostEqual(paired["oracle"].success_delta, 0.0)
+        self.assertAlmostEqual(paired["oracle"].rescue_rate_among_baseline_failures, 0.5)
+
+    def test_writes_paired_condition_summary_csv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "paired.csv"
+            paired = paired_condition_summary(
+                [
+                    _record("2", "no_memory", 401, 0.0),
+                    _record("2", "oracle", 401, 1.0),
+                ],
+                baseline_condition="no_memory",
+            )
+
+            write_paired_condition_summary_csv(paired, out)
+            text = out.read_text()
+
+        self.assertIn("condition,paired_attempts,baseline_successes", text)
+        self.assertIn("oracle,1,0,1,1,0,1.0000,1.0000,0.0000", text)
 
 
 def _write_result(path, *, condition, task_id, seed, reward, db, nl):

@@ -3,10 +3,10 @@
 ## 상태
 
 ```text
-status: selected_tasks_ready
+status: completed
 type: runnable rescue pilot
 benchmark: tau2-bench retail
-target scale: 20 selected tasks x 4 conditions x 3 seeds
+actual scale: 20 selected tasks x 4 conditions x 3 seeds = 240 runs
 ```
 
 ## 실험 목표
@@ -141,6 +141,25 @@ Template manifest:
 
 ```text
 tau2_card_poc/experiments/exp5_3_rescue_20_template.json
+```
+
+Executable manifest:
+
+```text
+tau2_card_poc/experiments/exp5_3_rescue_20.json
+```
+
+Card audit:
+
+```text
+docs/experiment5_3_card_audit.md
+```
+
+Results:
+
+```text
+docs/experiment5_3_results.md
+reports/exp5_3_rescue_20/
 ```
 
 ## Selected 20-Task Set

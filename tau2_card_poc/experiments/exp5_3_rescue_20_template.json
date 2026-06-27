@@ -25,5 +25,6 @@
     }
   ],
   "max_steps": 200,
-  "max_errors": 10
+  "max_errors": 10,
+  "log_level": "INFO"
 }

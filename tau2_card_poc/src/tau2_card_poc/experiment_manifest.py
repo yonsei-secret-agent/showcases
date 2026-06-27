@@ -12,6 +12,12 @@ from tau2_card_poc.memory_runner import MemoryRetrySpec
 class ExperimentCondition:
     name: str
     runtime_memory: str
+    per_task_runtime_memory: dict[str, str] | None = None
+
+    def runtime_memory_for_task(self, task_id: str) -> str:
+        if self.per_task_runtime_memory is None:
+            return self.runtime_memory
+        return self.per_task_runtime_memory[str(task_id)]
 
 
 @dataclass(frozen=True)
@@ -26,6 +32,7 @@ class ExperimentManifest:
     task_split_name: str | None = None
     max_steps: int = 100
     max_errors: int = 10
+    log_level: str = "INFO"
 
 
 def load_experiment_manifest(path: str | Path) -> ExperimentManifest:
@@ -41,12 +48,23 @@ def load_experiment_manifest(path: str | Path) -> ExperimentManifest:
             ExperimentCondition(
                 name=str(condition["name"]),
                 runtime_memory=str(condition.get("runtime_memory", "")),
+                per_task_runtime_memory=(
+                    {
+                        str(task_id): str(runtime_memory)
+                        for task_id, runtime_memory in condition[
+                            "per_task_runtime_memory"
+                        ].items()
+                    }
+                    if "per_task_runtime_memory" in condition
+                    else None
+                ),
             )
             for condition in data["conditions"]
         ],
         task_split_name=data.get("task_split_name"),
         max_steps=int(data.get("max_steps", 100)),
         max_errors=int(data.get("max_errors", 10)),
+        log_level=str(data.get("log_level", "INFO")),
     )
 
 
@@ -59,7 +77,7 @@ def iter_memory_retry_specs(manifest: ExperimentManifest) -> Iterator[MemoryRetr
                     domain=manifest.domain,
                     task_id=task_id,
                     condition=condition.name,
-                    runtime_memory=condition.runtime_memory,
+                    runtime_memory=condition.runtime_memory_for_task(task_id),
                     seed=seed,
                     trial=trial,
                     agent_model=manifest.agent_model,
@@ -67,6 +85,7 @@ def iter_memory_retry_specs(manifest: ExperimentManifest) -> Iterator[MemoryRetr
                     task_split_name=manifest.task_split_name,
                     max_steps=manifest.max_steps,
                     max_errors=manifest.max_errors,
+                    log_level=manifest.log_level,
                 )
 
 
@@ -80,3 +99,18 @@ def _validate_manifest(manifest: ExperimentManifest) -> None:
         raise ValueError("experiment manifest must include at least one seed")
     if not manifest.conditions:
         raise ValueError("experiment manifest must include at least one condition")
+
+    for condition in manifest.conditions:
+        if condition.per_task_runtime_memory is None:
+            continue
+        missing_task_ids = [
+            task_id
+            for task_id in manifest.task_ids
+            if str(task_id) not in condition.per_task_runtime_memory
+        ]
+        if missing_task_ids:
+            missing = ", ".join(missing_task_ids)
+            raise ValueError(
+                f"missing per-task runtime memory for condition "
+                f"{condition.name}: {missing}"
+            )

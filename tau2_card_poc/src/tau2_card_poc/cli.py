@@ -8,8 +8,10 @@ from tau2_card_poc.experiment_manifest import load_experiment_manifest
 from tau2_card_poc.reporting import (
     collect_experiment_records,
     condition_summary,
+    paired_condition_summary,
     task_stability_summary,
     write_condition_summary_csv,
+    write_paired_condition_summary_csv,
     write_task_stability_csv,
 )
 
@@ -49,6 +51,10 @@ def main(argv: list[str] | None = None) -> int:
             default_condition=args.default_condition,
         )
         write_condition_summary_csv(condition_summary(records), out_dir / "condition_summary.csv")
+        write_paired_condition_summary_csv(
+            paired_condition_summary(records),
+            out_dir / "paired_condition_summary.csv",
+        )
         write_task_stability_csv(task_stability_summary(records), out_dir / "task_stability.csv")
         print(f"wrote summaries for {len(records)} records to {out_dir}")
         return 0

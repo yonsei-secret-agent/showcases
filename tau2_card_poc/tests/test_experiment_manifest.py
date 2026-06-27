@@ -70,6 +70,65 @@ class ExperimentManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate condition"):
             list(iter_memory_retry_specs(manifest))
 
+    def test_expands_per_task_runtime_memory(self):
+        manifest_data = {
+            "experiment_id": "exp5_3_rescue_test",
+            "domain": "retail",
+            "agent_model": "gpt-4.1-mini",
+            "user_model": "gpt-4.1-mini",
+            "task_ids": ["2", "3"],
+            "seeds": [501],
+            "conditions": [
+                {"name": "no_memory", "runtime_memory": ""},
+                {
+                    "name": "oracle_single_missing_check_card",
+                    "per_task_runtime_memory": {
+                        "2": "Count only currently available variants.",
+                        "3": "Check pending item variant availability before modifying.",
+                    },
+                },
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = Path(tmp) / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest_data))
+
+            manifest = load_experiment_manifest(manifest_path)
+            specs = list(iter_memory_retry_specs(manifest))
+
+        self.assertEqual(specs[1].task_id, "2")
+        self.assertEqual(specs[1].condition, "oracle_single_missing_check_card")
+        self.assertEqual(
+            specs[1].runtime_memory,
+            "Count only currently available variants.",
+        )
+        self.assertEqual(specs[3].task_id, "3")
+        self.assertEqual(
+            specs[3].runtime_memory,
+            "Check pending item variant availability before modifying.",
+        )
+
+    def test_rejects_missing_per_task_runtime_memory(self):
+        manifest = ExperimentManifest(
+            experiment_id="bad",
+            domain="retail",
+            agent_model="gpt-4.1-mini",
+            user_model="gpt-4.1-mini",
+            task_ids=["2", "3"],
+            seeds=[501],
+            conditions=[
+                ExperimentCondition(
+                    name="oracle_single_missing_check_card",
+                    runtime_memory="",
+                    per_task_runtime_memory={"2": "Count only available variants."},
+                ),
+            ],
+        )
+
+        with self.assertRaisesRegex(ValueError, "missing per-task runtime memory"):
+            list(iter_memory_retry_specs(manifest))
+
 
 if __name__ == "__main__":
     unittest.main()

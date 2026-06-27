@@ -1,0 +1,5 @@
+condition,attempts,successes,success_rate,mean_reward
+generic_policy_card,60,16,0.2667,0.2667
+hard_mismatched_card,60,13,0.2167,0.2167
+no_memory,60,12,0.2000,0.2000
+oracle_single_missing_check_card,60,15,0.2500,0.2500

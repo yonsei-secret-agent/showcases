@@ -1,0 +1,5 @@
+condition,attempts,success_rate,db_mean,nl_assertion_mean,communicate_mean
+generic_policy_card,60,0.2667,0.5167,0.5965,
+hard_mismatched_card,60,0.2167,0.4667,0.6667,
+no_memory,60,0.2000,0.4500,0.5965,
+oracle_single_missing_check_card,60,0.2500,0.4000,0.6842,

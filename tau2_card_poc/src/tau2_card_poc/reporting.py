@@ -39,6 +39,19 @@ class TaskStability:
     group: str
 
 
+@dataclass(frozen=True)
+class PairedConditionSummary:
+    condition: str
+    paired_attempts: int
+    baseline_successes: int
+    condition_successes: int
+    paired_rescues: int
+    paired_regressions: int
+    success_delta: float
+    rescue_rate_among_baseline_failures: float
+    regression_rate_among_baseline_successes: float
+
+
 def collect_experiment_records(
     experiment_dir: str | Path,
     *,
@@ -122,6 +135,63 @@ def task_stability_summary(records: list[ExperimentRecord]) -> dict[str, TaskSta
     return summaries
 
 
+def paired_condition_summary(
+    records: list[ExperimentRecord],
+    *,
+    baseline_condition: str = "no_memory",
+) -> dict[str, PairedConditionSummary]:
+    baseline_by_key: dict[tuple[str, int | None], ExperimentRecord] = {}
+    condition_by_key: dict[str, dict[tuple[str, int | None], ExperimentRecord]] = {}
+    for record in records:
+        key = (record.task_id, record.seed)
+        if record.condition == baseline_condition:
+            baseline_by_key[key] = record
+        else:
+            condition_by_key.setdefault(record.condition, {})[key] = record
+
+    summaries: dict[str, PairedConditionSummary] = {}
+    for condition, condition_records in sorted(condition_by_key.items()):
+        pairs = [
+            (baseline_by_key[key], condition_record)
+            for key, condition_record in condition_records.items()
+            if key in baseline_by_key
+        ]
+        paired_attempts = len(pairs)
+        baseline_successes = sum(1 for baseline, _ in pairs if baseline.success)
+        condition_successes = sum(1 for _, condition_record in pairs if condition_record.success)
+        paired_rescues = sum(
+            1
+            for baseline, condition_record in pairs
+            if not baseline.success and condition_record.success
+        )
+        paired_regressions = sum(
+            1
+            for baseline, condition_record in pairs
+            if baseline.success and not condition_record.success
+        )
+        baseline_failures = paired_attempts - baseline_successes
+        summaries[condition] = PairedConditionSummary(
+            condition=condition,
+            paired_attempts=paired_attempts,
+            baseline_successes=baseline_successes,
+            condition_successes=condition_successes,
+            paired_rescues=paired_rescues,
+            paired_regressions=paired_regressions,
+            success_delta=(
+                (condition_successes - baseline_successes) / paired_attempts
+                if paired_attempts
+                else 0.0
+            ),
+            rescue_rate_among_baseline_failures=(
+                paired_rescues / baseline_failures if baseline_failures else 0.0
+            ),
+            regression_rate_among_baseline_successes=(
+                paired_regressions / baseline_successes if baseline_successes else 0.0
+            ),
+        )
+    return summaries
+
+
 def write_condition_summary_csv(
     summaries: dict[str, ConditionSummary],
     output_path: str | Path,
@@ -140,6 +210,45 @@ def write_condition_summary_csv(
                     summary.successes,
                     f"{summary.success_rate:.4f}",
                     f"{summary.mean_reward:.4f}",
+                ]
+            )
+    return path
+
+
+def write_paired_condition_summary_csv(
+    summaries: dict[str, PairedConditionSummary],
+    output_path: str | Path,
+) -> Path:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "condition",
+                "paired_attempts",
+                "baseline_successes",
+                "condition_successes",
+                "paired_rescues",
+                "paired_regressions",
+                "success_delta",
+                "rescue_rate_among_baseline_failures",
+                "regression_rate_among_baseline_successes",
+            ]
+        )
+        for condition in sorted(summaries):
+            summary = summaries[condition]
+            writer.writerow(
+                [
+                    summary.condition,
+                    summary.paired_attempts,
+                    summary.baseline_successes,
+                    summary.condition_successes,
+                    summary.paired_rescues,
+                    summary.paired_regressions,
+                    f"{summary.success_delta:.4f}",
+                    f"{summary.rescue_rate_among_baseline_failures:.4f}",
+                    f"{summary.regression_rate_among_baseline_successes:.4f}",
                 ]
             )
     return path

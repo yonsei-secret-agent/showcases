@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -23,6 +24,7 @@ class MemoryRetrySpec:
     task_split_name: str | None = None
     max_steps: int = 100
     max_errors: int = 10
+    log_level: str = "INFO"
 
 
 def format_runtime_memory(memory: str, *, condition: str | None = None) -> str:
@@ -137,6 +139,7 @@ def run_single_memory_retry(
     from tau2.data_model.simulation import TextRunConfig
     from tau2.evaluator.evaluator import EvaluationType
     from tau2.run import get_tasks, run_single_task
+    from loguru import logger
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -165,8 +168,11 @@ def run_single_memory_retry(
         llm_args_user={"temperature": 0.0},
         max_steps=spec.max_steps,
         max_errors=spec.max_errors,
+        log_level=spec.log_level,
         seed=spec.seed,
     )
+    logger.remove()
+    logger.add(sys.stderr, level=spec.log_level)
     simulation = runner(
         config,
         tasks[0],

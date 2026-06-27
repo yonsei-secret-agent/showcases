@@ -127,6 +127,7 @@ class MemoryRunnerTests(unittest.TestCase):
             calls["runner"] = {
                 "agent": config.agent,
                 "domain": config.domain,
+                "log_level": config.log_level,
                 "task_id": task.id,
                 "seed": kwargs["seed"],
                 "save_dir": kwargs["save_dir"],
@@ -144,6 +145,7 @@ class MemoryRunnerTests(unittest.TestCase):
                     trial=1,
                     agent_model="gpt-4.1-mini",
                     user_model="gpt-4.1-mini",
+                    log_level="WARNING",
                 ),
                 output_dir=Path(tmp),
                 task_loader=fake_task_loader,
@@ -153,6 +155,7 @@ class MemoryRunnerTests(unittest.TestCase):
 
         self.assertEqual(calls["task_loader"]["task_ids"], ["2"])
         self.assertEqual(calls["runner"]["domain"], "retail")
+        self.assertEqual(calls["runner"]["log_level"], "WARNING")
         self.assertTrue(calls["runner"]["agent"].startswith("runtime_memory_llm_agent_"))
         self.assertEqual(payload["info"]["condition"], "oracle_failure_card")
         self.assertEqual(payload["simulations"][0]["seed"], 301)

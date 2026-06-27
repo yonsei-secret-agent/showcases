@@ -72,7 +72,7 @@ def run_manifest(
             )
             continue
 
-        written_path = runner(spec, output_dir)
+        written_path = runner(spec, output_dir=output_dir)
         results.append(
             ManifestRunResult(
                 task_id=spec.task_id,
