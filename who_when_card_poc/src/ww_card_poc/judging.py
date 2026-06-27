@@ -112,6 +112,108 @@ def build_judge_prompt(case: WhoWhenCase, generation: dict[str, Any]) -> list[di
     ]
 
 
+def build_decoupled_judge_prompt(
+    case: WhoWhenCase,
+    generation: dict[str, Any],
+) -> list[dict[str, str]]:
+    metadata = generation.get("metadata") if isinstance(generation.get("metadata"), dict) else {}
+    failure_mode = str(metadata.get("target_failure_mode") or "abstract failure mode")
+    missing_check_type = str(metadata.get("target_missing_check_type") or "the missing abstract check")
+    corrective_action = str(
+        metadata.get("target_abstract_corrective_action")
+        or "perform the missing check before acting"
+    )
+    candidate = str(generation.get("output_text") or "")
+    user_prompt = "\n\n".join(
+        [
+            "Evaluate one regenerated next action for an abstraction stress-test experiment.",
+            (
+                "Do not assume access to the original gold diagnosis or original failed action. "
+                "Judge only whether the candidate performs a concrete next action that satisfies "
+                "the abstract success criterion below."
+            ),
+            "Original task:\n" + case.question,
+            f"Responsible agent: {case.mistake_agent}",
+            "Trajectory prefix before the regenerated action:\n" + _history_prefix_text(case),
+            "Abstract target failure mode:\n" + failure_mode,
+            "Missing-check criterion:\n" + missing_check_type,
+            "Abstract corrective action expected:\n" + corrective_action,
+            "Candidate regenerated next action:\n" + candidate,
+            (
+                "Return JSON only with these keys: "
+                "recurs_same_failure (boolean), avoids_decisive_error (boolean), "
+                "task_relevant (boolean), states_relevant_intent (boolean), "
+                "performs_concrete_repair_action (boolean), preserves_task_progress (boolean), "
+                "negative_transfer (boolean), repair_success (boolean), "
+                "repair_score (integer 0-3), rationale (short string). "
+                "repair_success should be true only when the candidate performs a concrete "
+                "task-relevant next action that addresses the missing-check criterion, preserves "
+                "task progress, and does not introduce a harmful detour. A candidate that only "
+                "states an intent to be careful or verify later should not count as repair_success. "
+                "If the abstract criterion is too vague to evaluate, be conservative."
+            ),
+        ]
+    )
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are a strict condition-blind evaluator for multi-agent repair. "
+                "Use only the abstract criterion supplied in the prompt. Output valid JSON only."
+            ),
+        },
+        {"role": "user", "content": user_prompt},
+    ]
+
+
+def build_failure_anchored_judge_prompt(
+    case: WhoWhenCase,
+    generation: dict[str, Any],
+) -> list[dict[str, str]]:
+    original_failed_action = case.content_at(case.mistake_step or -1)
+    candidate = str(generation.get("output_text") or "")
+    user_prompt = "\n\n".join(
+        [
+            "Evaluate one regenerated next action for a Who&When trace-prefix repair experiment.",
+            (
+                "You do not see the condition label, card text, card-derived missing-check type, "
+                "card-derived corrective action, or gold failure explanation. Compare only the "
+                "original failed action and the candidate next action in the task context."
+            ),
+            "Original task:\n" + case.question,
+            f"Responsible agent: {case.mistake_agent}",
+            "Trajectory prefix before the regenerated action:\n" + _history_prefix_text(case),
+            "Original failed action at the decisive step:\n" + original_failed_action,
+            "Candidate regenerated next action:\n" + candidate,
+            (
+                "Return JSON only with these keys: "
+                "recurs_same_failure (boolean), avoids_decisive_error (boolean), "
+                "task_relevant (boolean), states_relevant_intent (boolean), "
+                "performs_concrete_repair_action (boolean), preserves_task_progress (boolean), "
+                "negative_transfer (boolean), repair_success (boolean), "
+                "repair_score (integer 0-3), rationale (short string). "
+                "recurs_same_failure should be true when the candidate repeats the same concrete "
+                "failure pattern visible in the original failed action. repair_success should be "
+                "true only when the candidate avoids that visible failure pattern, performs a "
+                "concrete task-relevant next action, preserves task progress, and does not "
+                "introduce a harmful detour. Do not reward a candidate merely for stating that it "
+                "will be careful later."
+            ),
+        ]
+    )
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are a strict condition-blind evaluator for multi-agent repair. "
+                "Judge by comparing the original failed action with the candidate action. "
+                "Output valid JSON only."
+            ),
+        },
+        {"role": "user", "content": user_prompt},
+    ]
+
+
 def existing_judgment_keys(output_path: Path) -> set[tuple[str, int]]:
     keys: set[tuple[str, int]] = set()
     for record in read_jsonl(output_path):
@@ -125,6 +227,7 @@ def run_judgments(
     generations_path: Path,
     output_path: Path,
     cases: list[WhoWhenCase],
+    judge_mode: str = "diagnostic",
     limit_records: int | None = None,
     dry_run: bool = False,
     resume: bool = True,
@@ -167,9 +270,15 @@ def run_judgments(
                 raw_text = json.dumps(parsed)
             else:
                 try:
+                    if judge_mode in {"decoupled", "abstract_criterion"}:
+                        messages = build_decoupled_judge_prompt(case, generation)
+                    elif judge_mode == "failure_anchored":
+                        messages = build_failure_anchored_judge_prompt(case, generation)
+                    else:
+                        messages = build_judge_prompt(case, generation)
                     response = client.complete(
                         model=settings.models.judge_model,
-                        messages=build_judge_prompt(case, generation),
+                        messages=messages,
                         temperature=settings.models.judge_temperature,
                         max_tokens=settings.models.max_output_tokens,
                         seed=settings.experiment_seed,
@@ -192,6 +301,7 @@ def run_judgments(
                     "generation_model": generation.get("model", ""),
                     "generation_error": generation.get("error", ""),
                     "prompt_hash": generation.get("prompt_hash", ""),
+                    "judge_mode": judge_mode,
                 },
             )
             handle.write(record.to_json() + "\n")

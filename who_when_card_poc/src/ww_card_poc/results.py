@@ -46,6 +46,8 @@ def summarize_judgments(judgments_path: Path) -> tuple[list[dict[str, Any]], lis
         relevant: list[float] = []
         intents: list[float] = []
         concrete_actions: list[float] = []
+        repair_given_concrete: list[float] = []
+        repair_without_concrete: list[float] = []
         negative_transfers: list[float] = []
         scores: list[float] = []
         for record in parsed_records:
@@ -67,6 +69,11 @@ def summarize_judgments(judgments_path: Path) -> tuple[list[dict[str, Any]], lis
                 intents.append(1.0 if intent else 0.0)
             if concrete is not None:
                 concrete_actions.append(1.0 if concrete else 0.0)
+            if success is not None and concrete is not None:
+                if concrete:
+                    repair_given_concrete.append(1.0 if success else 0.0)
+                else:
+                    repair_without_concrete.append(1.0 if success else 0.0)
             if negative_transfer is not None:
                 negative_transfers.append(1.0 if negative_transfer else 0.0)
             if score is not None:
@@ -84,6 +91,12 @@ def summarize_judgments(judgments_path: Path) -> tuple[list[dict[str, Any]], lis
                 "concrete_repair_action_rate": round(mean(concrete_actions), 4)
                 if concrete_actions
                 else "",
+                "repair_given_concrete_rate": round(mean(repair_given_concrete), 4)
+                if repair_given_concrete
+                else "",
+                "repair_without_concrete_rate": round(mean(repair_without_concrete), 4)
+                if repair_without_concrete
+                else "",
                 "negative_transfer_rate": round(mean(negative_transfers), 4)
                 if negative_transfers
                 else "",
@@ -97,6 +110,8 @@ def summarize_judgments(judgments_path: Path) -> tuple[list[dict[str, Any]], lis
         recurrences: list[float] = []
         successes: list[float] = []
         concrete_actions: list[float] = []
+        repair_given_concrete: list[float] = []
+        repair_without_concrete: list[float] = []
         negative_transfers: list[float] = []
         for record in parsed_records:
             parsed = dict(record.get("parsed") or {})
@@ -110,6 +125,11 @@ def summarize_judgments(judgments_path: Path) -> tuple[list[dict[str, Any]], lis
                 successes.append(1.0 if success else 0.0)
             if concrete is not None:
                 concrete_actions.append(1.0 if concrete else 0.0)
+            if success is not None and concrete is not None:
+                if concrete:
+                    repair_given_concrete.append(1.0 if success else 0.0)
+                else:
+                    repair_without_concrete.append(1.0 if success else 0.0)
             if negative_transfer is not None:
                 negative_transfers.append(1.0 if negative_transfer else 0.0)
         case_rows.append(
@@ -122,6 +142,12 @@ def summarize_judgments(judgments_path: Path) -> tuple[list[dict[str, Any]], lis
                 "repair_success_rate": round(mean(successes), 4) if successes else "",
                 "concrete_repair_action_rate": round(mean(concrete_actions), 4)
                 if concrete_actions
+                else "",
+                "repair_given_concrete_rate": round(mean(repair_given_concrete), 4)
+                if repair_given_concrete
+                else "",
+                "repair_without_concrete_rate": round(mean(repair_without_concrete), 4)
+                if repair_without_concrete
                 else "",
                 "negative_transfer_rate": round(mean(negative_transfers), 4)
                 if negative_transfers
@@ -194,13 +220,14 @@ def write_summary_report(
         "",
         "## By Condition",
         "",
-        "| condition | n | valid | repair_success_rate | same_failure_recurrence_rate | concrete_action_rate | negative_transfer_rate | mean_score | errors |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| condition | n | valid | repair_success_rate | same_failure_recurrence_rate | concrete_action_rate | repair_given_concrete | repair_without_concrete | negative_transfer_rate | mean_score | errors |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in condition_rows:
         lines.append(
             "| {condition} | {n} | {valid_judgments} | {repair_success_rate} | "
             "{same_failure_recurrence_rate} | {concrete_repair_action_rate} | "
+            "{repair_given_concrete_rate} | {repair_without_concrete_rate} | "
             "{negative_transfer_rate} | {mean_repair_score} | {errors} |".format(**row)
         )
     if paired_rows:

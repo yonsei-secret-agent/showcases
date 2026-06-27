@@ -12,6 +12,12 @@ from ww_card_poc.data_audit import (
     write_data_audit_report,
 )
 from ww_card_poc.experiment_config import format_experiment_config, load_experiment_config
+from ww_card_poc.exp3 import (
+    build_exp3b_inputs_from_audit,
+    case_ids_from_input,
+    run_exp3a_audit,
+)
+from ww_card_poc.exp4 import DEFAULT_EXP4_CONDITIONS, build_exp4_inputs_from_audit
 from ww_card_poc.generation_runner import run_generations
 from ww_card_poc.judging import run_judgments
 from ww_card_poc.phase2a_inputs import build_phase2a_inputs, write_phase2a_inputs
@@ -307,6 +313,7 @@ def judge_phase2a_cmd(args: argparse.Namespace) -> int:
         generations_path=generations_path,
         output_path=output_path,
         cases=cases,
+        judge_mode=args.judge_mode,
         limit_records=args.limit_records,
         dry_run=args.dry_run,
         resume=not args.no_resume,
@@ -359,6 +366,104 @@ def summarize_phase2a_cmd(args: argparse.Namespace) -> int:
     print(f"Condition CSV: {condition_csv_path}")
     print(f"Case CSV: {case_csv_path}")
     return 0
+
+
+def run_exp3a_audit_cmd(args: argparse.Namespace) -> int:
+    dotenv_path = Path(args.env_file) if args.env_file else None
+    settings = load_settings(dotenv_path=dotenv_path, override_env=args.override_env)
+    errors = settings.validate()
+    if errors:
+        print("Config issues:")
+        for error in errors:
+            print(f"- {error}")
+        return 1
+
+    cases = load_who_when_cases(settings.paths.who_when_repo_path)
+    source_input = Path(args.source_input)
+    case_ids = case_ids_from_input(source_input)
+    output_path = Path(args.output)
+    records = run_exp3a_audit(
+        settings=settings,
+        cases=cases,
+        case_ids=case_ids,
+        output_path=output_path,
+        limit=args.limit,
+    )
+    accepted = sum(1 for record in records if record.accepted)
+    print(f"Source input cases: {len(case_ids)}")
+    print(f"Exp3a audit records written: {len(records)}")
+    print(f"Accepted records: {accepted}")
+    print(f"Rejected records: {len(records) - accepted}")
+    print(f"Output: {output_path}")
+    return 0 if accepted else 1
+
+
+def build_exp3b_inputs_cmd(args: argparse.Namespace) -> int:
+    dotenv_path = Path(args.env_file) if args.env_file else None
+    settings = load_settings(dotenv_path=dotenv_path, override_env=args.override_env)
+    errors = settings.validate()
+    if errors:
+        print("Config issues:")
+        for error in errors:
+            print(f"- {error}")
+        return 1
+
+    cases = load_who_when_cases(settings.paths.who_when_repo_path)
+    conditions = args.conditions or [
+        "broad_verification_card",
+        "correct_mode_only_placebo",
+        "oracle_abstracted_card",
+        "hard_mismatched_abstracted_card",
+    ]
+    records = build_exp3b_inputs_from_audit(
+        audit_path=Path(args.audit),
+        output_path=Path(args.output),
+        cases=cases,
+        conditions=conditions,
+    )
+    flagged = sum(1 for record in records if record.leakage_flags)
+    print(f"Conditions: {conditions}")
+    print(f"Exp3b input records written: {len(records)}")
+    print(f"Records with leakage flags: {flagged}")
+    print(f"Output: {Path(args.output)}")
+    return 0 if records and not flagged else 1
+
+
+def build_exp4_inputs_cmd(args: argparse.Namespace) -> int:
+    dotenv_path = Path(args.env_file) if args.env_file else None
+    settings = load_settings(dotenv_path=dotenv_path, override_env=args.override_env)
+    errors = settings.validate()
+    if errors:
+        print("Config issues:")
+        for error in errors:
+            print(f"- {error}")
+        return 1
+
+    cases = load_who_when_cases(settings.paths.who_when_repo_path)
+    conditions = args.conditions or DEFAULT_EXP4_CONDITIONS
+    records = build_exp4_inputs_from_audit(
+        audit_path=Path(args.audit),
+        output_path=Path(args.output),
+        cases=cases,
+        conditions=conditions,
+        limit=args.limit,
+    )
+    flagged = sum(1 for record in records if record.leakage_flags)
+    target_cases = sorted({record.case_id for record in records})
+    source_cases = sorted(
+        {
+            str(record.metadata.get("source_case_id"))
+            for record in records
+            if record.metadata.get("source_case_id")
+        }
+    )
+    print(f"Conditions: {conditions}")
+    print(f"Exp4 target cases: {len(target_cases)}")
+    print(f"Exp4 source cases: {len(source_cases)}")
+    print(f"Exp4 input records written: {len(records)}")
+    print(f"Records with leakage flags: {flagged}")
+    print(f"Output: {Path(args.output)}")
+    return 0 if records and not flagged else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -548,6 +653,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Judgment JSONL path. Defaults to data/judgments/phase2a_smoke_judgments.jsonl.",
     )
+    judge_phase2a.add_argument(
+        "--judge-mode",
+        choices=["diagnostic", "decoupled", "abstract_criterion", "failure_anchored"],
+        default="diagnostic",
+        help=(
+            "Use diagnostic, abstract_criterion/decoupled, or failure_anchored judge. "
+            "failure_anchored does not use card-derived missing-check metadata."
+        ),
+    )
     judge_phase2a.add_argument("--limit-records", type=int, default=None, help="Limit records.")
     judge_phase2a.add_argument("--dry-run", action="store_true", help="Write placeholder judgments.")
     judge_phase2a.add_argument(
@@ -577,6 +691,86 @@ def build_parser() -> argparse.ArgumentParser:
     summarize_phase2a.add_argument("--case-csv", default=None, help="Output case CSV path.")
     summarize_phase2a.add_argument("--json", default=None, help="Output condition JSON path.")
     summarize_phase2a.set_defaults(func=summarize_phase2a_cmd)
+
+    exp3a = subparsers.add_parser(
+        "run-exp3a-audit",
+        help="Generate and audit abstracted cards before Exp3 generation.",
+    )
+    exp3a.add_argument("--env-file", default=None, help="Path to an env file. Defaults to .env.")
+    exp3a.add_argument(
+        "--override-env",
+        action="store_true",
+        help="Let env file values override already-set process env vars.",
+    )
+    exp3a.add_argument(
+        "--source-input",
+        default="data/runs/exp2a_specificity_inputs.jsonl",
+        help="Prior input JSONL used to select unique target cases.",
+    )
+    exp3a.add_argument(
+        "--output",
+        default="data/interim/exp3_abstraction_audit.jsonl",
+        help="Output Exp3a audit JSONL path.",
+    )
+    exp3a.add_argument("--limit", type=int, default=None, help="Limit target cases.")
+    exp3a.set_defaults(func=run_exp3a_audit_cmd)
+
+    exp3b = subparsers.add_parser(
+        "build-exp3b-inputs",
+        help="Build Exp3b generation inputs from accepted Exp3a audit records.",
+    )
+    exp3b.add_argument("--env-file", default=None, help="Path to an env file. Defaults to .env.")
+    exp3b.add_argument(
+        "--override-env",
+        action="store_true",
+        help="Let env file values override already-set process env vars.",
+    )
+    exp3b.add_argument(
+        "--audit",
+        default="data/interim/exp3_abstraction_audit.jsonl",
+        help="Exp3a audit JSONL path.",
+    )
+    exp3b.add_argument(
+        "--output",
+        default="data/runs/exp3_abstraction_inputs.jsonl",
+        help="Output Exp3b input JSONL path.",
+    )
+    exp3b.add_argument(
+        "--conditions",
+        nargs="+",
+        default=None,
+        help="Override Exp3b conditions.",
+    )
+    exp3b.set_defaults(func=build_exp3b_inputs_cmd)
+
+    exp4 = subparsers.add_parser(
+        "build-exp4-inputs",
+        help="Build Exp4 cross-trace transfer inputs from accepted Exp3 audit records.",
+    )
+    exp4.add_argument("--env-file", default=None, help="Path to an env file. Defaults to .env.")
+    exp4.add_argument(
+        "--override-env",
+        action="store_true",
+        help="Let env file values override already-set process env vars.",
+    )
+    exp4.add_argument(
+        "--audit",
+        default="data/interim/exp3_abstraction_audit.jsonl",
+        help="Exp3a audit JSONL path.",
+    )
+    exp4.add_argument(
+        "--output",
+        default="data/runs/exp4_transfer_inputs.jsonl",
+        help="Output Exp4 input JSONL path.",
+    )
+    exp4.add_argument("--limit", type=int, default=None, help="Limit accepted target audits.")
+    exp4.add_argument(
+        "--conditions",
+        nargs="+",
+        default=None,
+        help="Override Exp4 conditions.",
+    )
+    exp4.set_defaults(func=build_exp4_inputs_cmd)
     return parser
 
 

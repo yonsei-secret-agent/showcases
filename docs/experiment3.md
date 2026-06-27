@@ -3,8 +3,8 @@
 ## 상태
 
 ```text
-status: next planned
-type: next gate experiment
+status: completed smoke
+type: abstraction gate experiment
 scope: same-trace gold-point repair, abstraction stress test, judge decoupling
 ```
 
@@ -77,6 +77,247 @@ gold attribution에서 추출한 abstract failure pattern이
 ```
 
 Experiment 3는 이 둘을 가른다.
+
+## 실행 결과
+
+실행일:
+
+```text
+2026-06-27
+```
+
+실행 범위:
+
+```text
+Exp3a:
+  11 target cases
+  oracle_abstracted_card 생성
+  hard_mismatched_abstracted_card 생성
+  LLM leakage / manipulation / distinctness audit
+
+Exp3b:
+  11 target cases
+  4 core conditions
+  2 attempts
+  88 generations
+  88 decoupled judgments
+```
+
+사용한 조건:
+
+```text
+broad_verification_card
+correct_mode_only_placebo
+oracle_abstracted_card
+hard_mismatched_abstracted_card
+```
+
+이번 smoke에서는 `oracle_specific_card_current` reference condition과 diagnostic judge sensitivity는 돌리지 않았다.
+
+### Exp3a Audit
+
+```text
+audit records: 11
+accepted: 11
+rejected: 0
+exact leakage flags: 0
+
+abstraction_level:
+  action_schema: 7
+  check_type: 4
+```
+
+Target failure mode 분포:
+
+```text
+unverified or inaccurate factual claim: 4
+decisive reasoning or execution error: 3
+unsupported assumption or fabricated intermediate data: 3
+incomplete handling of task constraints or data cases: 1
+```
+
+관찰:
+
+```text
+Exp3a는 renderer gate를 통과했다.
+abstracted card는 broad baseline과 구별 가능하다고 audit되었고,
+mode/check type 복원 가능성도 통과했다.
+```
+
+### Exp3b Metrics: Abstract-Criterion Judge
+
+처음 실행한 judge는 gold reason 원문은 보지 않았지만, `oracle_abstracted_card`에서 생성된
+`missing_check_type`과 `abstract_corrective_action`을 criterion으로 사용했다. 따라서 이후 문서에서는
+이를 완전한 decoupled judge가 아니라 **abstract-criterion judge**로 해석한다.
+
+Abstract-criterion judge 기준 결과:
+
+| condition | n | repair_success | same_failure_recurrence | concrete_action | negative_transfer | mean_score |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| broad_verification_card | 22 | 0.2727 | 0.5455 | 0.2727 | 0.0455 | 1.5000 |
+| correct_mode_only_placebo | 22 | 0.1364 | 0.6364 | 0.1364 | 0.0455 | 1.2273 |
+| hard_mismatched_abstracted_card | 22 | 0.4091 | 0.4091 | 0.4091 | 0.0909 | 1.7727 |
+| oracle_abstracted_card | 22 | 0.6364 | 0.0455 | 0.6364 | 0.0000 | 2.2727 |
+
+핵심 contrast:
+
+```text
+abstract_nudge_gap:
+  oracle_abstracted - broad_verification
+  = +0.3637 repair
+
+mode_routing_lift:
+  correct_mode_only - broad_verification
+  = -0.1363 repair
+
+abstract_action_lift:
+  oracle_abstracted - correct_mode_only
+  = +0.5000 repair
+
+abstract_right_vs_wrong:
+  oracle_abstracted - hard_mismatched_abstracted
+  = +0.2273 repair
+
+recurrence reduction vs broad:
+  broad recurrence - oracle_abstracted recurrence
+  = +0.5000
+```
+
+Case-level 관찰:
+
+```text
+oracle best over broad and mismatch: 3 / 11 cases
+all equal: 6 / 11 cases
+mixed tie: 2 / 11 cases
+```
+
+해석상 주의:
+
+```text
+aggregate signal은 강하지만, case-level에서는 동률이 많다.
+따라서 이 smoke는 powered statistical evidence가 아니라 gate signal이다.
+또한 judge criterion이 oracle card에서 파생되었으므로,
+이 결과만으로 circularity가 제거되었다고 볼 수 없다.
+```
+
+### Judge-Ablation: Failure-Anchored Rejudging
+
+추가 피드백 후, generation은 다시 돌리지 않고 기존 88개 candidate action을 **failure-anchored judge**로 재채점했다.
+
+이 judge는 다음 정보를 보지 않는다.
+
+```text
+condition label
+card text
+card-derived missing_check_type
+card-derived corrective action
+gold failure explanation
+```
+
+대신 다음만 비교한다.
+
+```text
+original task
+trajectory prefix
+responsible agent
+original failed action
+candidate regenerated action
+```
+
+결과:
+
+| condition | n | repair_success | recurrence | concrete_action | repair_given_concrete | repair_without_concrete |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| broad_verification_card | 22 | 0.5455 | 0.3636 | 0.5455 | 1.0000 | 0.0000 |
+| correct_mode_only_placebo | 22 | 0.4545 | 0.4545 | 0.4545 | 1.0000 | 0.0000 |
+| hard_mismatched_abstracted_card | 22 | 0.4545 | 0.5000 | 0.4545 | 1.0000 | 0.0000 |
+| oracle_abstracted_card | 22 | 0.6364 | 0.2727 | 0.6364 | 1.0000 | 0.0000 |
+
+Judge-gap:
+
+```text
+abstract-criterion judge:
+  oracle - broad = +0.3637
+  oracle - hard_mismatch = +0.2273
+  oracle - mode_only = +0.5000
+
+failure-anchored judge:
+  oracle - broad = +0.0909
+  oracle - hard_mismatch = +0.1819
+  oracle - mode_only = +0.1819
+```
+
+Case-level under failure-anchored judge:
+
+```text
+oracle strict best: 1 / 11 cases
+oracle tied best: 4 / 11 cases
+all equal or mixed: 5 / 11 cases
+mode beats oracle: 1 / 11 cases
+```
+
+핵심 관찰:
+
+```text
+1. oracle advantage는 abstract-criterion judge에서보다 크게 줄었다.
+2. 하지만 oracle - hard_mismatch 차이는 완전히 사라지지는 않았다.
+3. repair_success와 concrete_action_rate는 여전히 같은 값을 보인다.
+4. 따라서 현재 신호는 weak-real 가능성이 있지만,
+   "정밀 attribution이 명확히 더 유용하다"는 증거로는 부족하다.
+```
+
+## 결과 해석
+
+초기 abstract-criterion 결과만 보면 Experiment 2A의 신호가 literal gold diagnosis만으로 설명되지는 않는다는 쪽을 지지하는 듯했다.
+하지만 failure-anchored 재채점 결과, 그 우위는 상당히 줄었다.
+
+따라서 Experiment 3의 현재 해석은 보수적으로 바꿔야 한다.
+
+```text
+지원되는 약한 신호:
+  맞는 abstract card가 hard mismatch보다 나을 가능성은 있다.
+
+지원되지 않는 강한 신호:
+  oracle abstract card가 generic/broad guidance보다 안정적으로 낫다.
+  mode-only보다 action abstraction이 명확히 낫다.
+  judge circularity가 완전히 제거되었다.
+```
+
+가장 정직한 해석:
+
+```text
+Exp3는 strong continue가 아니라 weak-positive / judge-dependent signal이다.
+Exp4로 바로 가기 전에, Exp4의 primary judge는 failure-anchored 방식이어야 한다.
+그리고 최종 thesis 증거는 runnable closed-loop task success에서 확보해야 한다.
+```
+
+하지만 아직 claim boundary는 좁다.
+
+지원되는 해석:
+
+```text
+same-trace gold-point repair signal may partially survive abstraction,
+but much of the abstract-criterion advantage is judge-dependent.
+```
+
+아직 지원되지 않는 해석:
+
+```text
+Failure Card is reusable memory.
+Cross-trace transfer works.
+Predicted Who&When attribution is useful.
+Agent self-improves end-to-end.
+```
+
+결론:
+
+```text
+Do not rerun Experiments 1 and 2.
+Do not scale same-trace powered runs yet.
+Use the judge ablation as a decision point.
+If continuing to Experiment 4, use failure-anchored judge as primary
+and treat abstract-criterion judge as sensitivity only.
+```
 
 ## 실험 구상
 

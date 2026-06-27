@@ -240,6 +240,45 @@ def build_broad_verification_card() -> RuntimeCard:
     )
 
 
+def build_mode_only_card(failure_mode: str) -> RuntimeCard:
+    return RuntimeCard(
+        failure_mode=failure_mode,
+        violated_requirement_pattern=(
+            "This next action belongs to the named failure category. Use the category label as "
+            "a risk lens for choosing the next action."
+        ),
+        risky_next_action_pattern=(
+            "The next action may repeat this failure category if the category-level risk is ignored."
+        ),
+        do="Use the failure category to decide what kind of risk to inspect before acting.",
+        do_not="Do not ignore the named failure category when deciding the next concrete action.",
+        check_before_next_action="What risk does this failure category imply for the next action?",
+        applicable_when="Use this before acting when only the failure category is known.",
+    )
+
+
+def build_abstracted_card(
+    *,
+    failure_mode: str,
+    missing_check_type: str,
+    abstract_failure_pattern: str,
+    abstract_corrective_action: str,
+    check_before_next_action: str,
+    applicable_when: str,
+) -> RuntimeCard:
+    return RuntimeCard(
+        failure_mode=failure_mode,
+        violated_requirement_pattern=abstract_failure_pattern,
+        risky_next_action_pattern=(
+            f"The next action may fail if it skips this check type: {missing_check_type}."
+        ),
+        do=abstract_corrective_action,
+        do_not="Do not proceed by relying on the unchecked assumption or incomplete step.",
+        check_before_next_action=check_before_next_action,
+        applicable_when=applicable_when,
+    )
+
+
 def leakage_flags(text: str, *, case: WhoWhenCase) -> list[str]:
     flags: list[str] = []
     normalized_text = " ".join(text.lower().split())
@@ -296,6 +335,11 @@ def render_condition(
     if condition == "broad_verification_card":
         card = build_broad_verification_card()
         return card.render(), {"condition_source": "broad_verification_card", "card": card.to_dict()}
+    if condition == "correct_mode_only_placebo":
+        reason = sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth])
+        failure_mode = infer_failure_mode(reason)
+        card = build_mode_only_card(failure_mode)
+        return card.render(), {"condition_source": "correct_mode_only_placebo", "card": card.to_dict()}
     if condition == "strong_generic_guideline":
         text = "\n".join(
             [

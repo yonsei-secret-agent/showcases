@@ -3,13 +3,16 @@
 ## 상태
 
 ```text
-status: planned
+status: deferred / conditional
 type: transfer smoke
 scope: Who&When trace-prefix transfer under oracle retrieval
-prerequisite: Experiment 3 abstraction stress test should pass or be at least non-collapsed
+prerequisite: Experiment 3 judge-ablation should leave enough signal to justify transfer
 ```
 
-Experiment 4는 Experiment 3가 통과했을 때 실행하는 작은 transfer probe다.
+Experiment 4는 Experiment 3가 충분히 살아남았을 때 실행하는 작은 transfer probe다.
+
+현재 Experiment 3 judge-ablation 결과는 `strong continue`가 아니라 weak-positive / judge-dependent signal이다.
+따라서 Experiment 4는 바로 실행하지 않고, 실행하더라도 primary judge를 바꾼 상태에서만 진행한다.
 
 단, Experiment 3 결과에 따라 Experiment 4의 형태가 달라진다.
 
@@ -17,12 +20,30 @@ Cross-trace transfer는 스킵된 것이 아니라 지연된 것이다.
 
 ```text
 Cross-trace transfer is deferred, not removed.
-Experiment 4 should follow if Experiment 3 survives abstraction.
+Experiment 4 should follow only if the signal remains useful under failure-anchored judging.
 ```
 
 ```text
 Exp3 result: oracle_abstracted > mode_only > broad
   Run Experiment 4 as abstract failure-memory transfer.
+
+Exp3 observed result:
+  oracle_abstracted > hard_mismatch > broad > mode_only
+  Run Experiment 4 as abstract failure-memory transfer,
+  while keeping mode_only as a diagnostic for routing-only value.
+
+Exp3 judge-ablation observed result:
+  abstract-criterion judge:
+    oracle-broad = +0.3637
+    oracle-hard_mismatch = +0.2273
+
+  failure-anchored judge:
+    oracle-broad = +0.0909
+    oracle-hard_mismatch = +0.1819
+
+  Interpretation:
+    signal is weaker after removing card-derived judge criteria.
+    If Exp4 is run, failure-anchored judge must be primary.
 
 Exp3 result: mode_only ~= oracle_abstracted > broad
   Redesign Experiment 4 as mode-routing / retrieval transfer.
@@ -84,6 +105,18 @@ end-to-end task rescue가 됐다.
 ```text
 Under oracle retrieval of same-mode source memories,
 abstract attribution-derived cards transfer to held-out target trace prefixes.
+```
+
+Judge requirement:
+
+```text
+primary:
+  failure-anchored judge
+  sees original failed action and candidate action
+  does not see source card text, target missing_check_type, or card-derived corrective action
+
+sensitivity only:
+  abstract-criterion judge
 ```
 
 ## 데이터 구성
@@ -148,7 +181,7 @@ right failure-mode routing vs wrong failure-mode routing 실험일 수 있다.
 
 ## 조건
 
-기본 6조건:
+기본 7조건:
 
 ```text
 1. no_guidance
