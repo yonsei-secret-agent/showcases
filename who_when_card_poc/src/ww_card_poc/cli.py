@@ -20,7 +20,13 @@ from ww_card_poc.reality_check import (
     render_reality_check_report,
     write_reality_check_report,
 )
-from ww_card_poc.results import summarize_judgments, write_csv, write_json, write_summary_report
+from ww_card_poc.results import (
+    paired_contrasts,
+    summarize_judgments,
+    write_csv,
+    write_json,
+    write_summary_report,
+)
 from ww_card_poc.settings import format_settings, load_settings
 
 
@@ -108,7 +114,12 @@ def select_smoke_cases_cmd(args: argparse.Namespace) -> int:
     smoke = config.smoke
     smoke_filter = SmokeCaseFilter.from_config(smoke.get("candidate_filter", {}))
     limit = int(args.limit or smoke.get("candidate_cases", 15))
-    selected = select_smoke_cases(cases, smoke_filter=smoke_filter, limit=limit)
+    selected = select_smoke_cases(
+        cases,
+        smoke_filter=smoke_filter,
+        limit=limit,
+        stratify_by_failure_mode=bool(smoke.get("stratify_by_failure_mode", False)),
+    )
 
     output_path = (
         Path(args.output)
@@ -162,6 +173,13 @@ def build_phase2a_inputs_cmd(args: argparse.Namespace) -> int:
     smoke = config.smoke
     smoke_filter = SmokeCaseFilter.from_config(smoke.get("candidate_filter", {}))
     limit = int(args.limit or smoke.get("main_cases", 10))
+    stratify = bool(smoke.get("stratify_by_failure_mode", False))
+    mismatch_pool = select_smoke_cases(
+        cases,
+        smoke_filter=smoke_filter,
+        limit=len(cases),
+        stratify_by_failure_mode=False,
+    )
     if args.case_metrics:
         min_recurrence = float(
             args.min_no_guidance_recurrence
@@ -171,20 +189,40 @@ def build_phase2a_inputs_cmd(args: argparse.Namespace) -> int:
         selected_ids = _case_ids_from_metrics(Path(args.case_metrics), min_recurrence=min_recurrence)
         selected = [
             case
-            for case in select_smoke_cases(cases, smoke_filter=smoke_filter, limit=len(cases))
+            for case in select_smoke_cases(
+                cases,
+                smoke_filter=smoke_filter,
+                limit=len(cases),
+                stratify_by_failure_mode=stratify,
+            )
             if case.case_id in selected_ids
         ][:limit]
     elif args.case_id:
         selected_ids = set(args.case_id)
         selected = [
             case
-            for case in select_smoke_cases(cases, smoke_filter=smoke_filter, limit=len(cases))
+            for case in select_smoke_cases(
+                cases,
+                smoke_filter=smoke_filter,
+                limit=len(cases),
+                stratify_by_failure_mode=stratify,
+            )
             if case.case_id in selected_ids
         ][:limit]
     else:
-        selected = select_smoke_cases(cases, smoke_filter=smoke_filter, limit=limit)
+        selected = select_smoke_cases(
+            cases,
+            smoke_filter=smoke_filter,
+            limit=limit,
+            stratify_by_failure_mode=stratify,
+        )
     conditions = list(args.conditions or smoke.get("conditions", []))
-    records = build_phase2a_inputs(selected, conditions=conditions)
+    records = build_phase2a_inputs(
+        selected,
+        conditions=conditions,
+        mismatch_pool=mismatch_pool,
+        block_leakage=True,
+    )
 
     output_path = (
         Path(args.output)
@@ -289,6 +327,7 @@ def summarize_phase2a_cmd(args: argparse.Namespace) -> int:
         else settings.paths.data_dir / "judgments" / "phase2a_smoke_judgments.jsonl"
     )
     condition_rows, case_rows = summarize_judgments(judgments_path)
+    paired_rows = paired_contrasts(case_rows)
 
     summary_path = (
         Path(args.report)
@@ -310,7 +349,7 @@ def summarize_phase2a_cmd(args: argparse.Namespace) -> int:
         if args.json
         else settings.paths.data_dir / "interim" / "phase2a_condition_metrics.json"
     )
-    write_summary_report(condition_rows, summary_path)
+    write_summary_report(condition_rows, summary_path, paired_rows=paired_rows)
     write_csv(condition_rows, condition_csv_path)
     write_csv(case_rows, case_csv_path)
     write_json(condition_rows, json_path)

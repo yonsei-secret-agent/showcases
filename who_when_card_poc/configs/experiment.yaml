@@ -17,10 +17,11 @@ phases:
   phase4_replayable_subset_rescue: false
 
 smoke:
-  candidate_cases: 15
+  candidate_cases: 20
   no_guidance_repeats: 3
   failure_prone_recurrence_threshold: 0.4
-  main_cases: 10
+  main_cases: 12
+  stratify_by_failure_mode: true
   candidate_filter:
     dataset_type: algorithm_generated
     min_mistake_step: 2
@@ -29,7 +30,8 @@ smoke:
     max_history_len: 10
   conditions:
     - no_guidance
-    - strong_generic_guideline
+    - coarse_reflection
+    - broad_verification_card
     - sanitized_raw_gold_explanation
-    - oracle_runtime_card
-    - wrong_mismatched_card
+    - oracle_specific_card
+    - hard_mismatched_card

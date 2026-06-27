@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import defaultdict
 from typing import Any
 
+from ww_card_poc.conditions import infer_failure_mode, sanitize_text
 from ww_card_poc.who_when_io import WhoWhenCase, phase2a_status
 
 
@@ -46,6 +48,7 @@ def select_smoke_cases(
     *,
     smoke_filter: SmokeCaseFilter,
     limit: int,
+    stratify_by_failure_mode: bool = False,
 ) -> list[WhoWhenCase]:
     selected = [case for case in cases if smoke_filter.matches(case)]
     selected.sort(
@@ -55,6 +58,22 @@ def select_smoke_cases(
             int(case.path.stem) if case.path.stem.isdigit() else 0,
         )
     )
+    if stratify_by_failure_mode:
+        by_mode: dict[str, list[WhoWhenCase]] = defaultdict(list)
+        for case in selected:
+            mode = infer_failure_mode(
+                sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth])
+            )
+            by_mode[mode].append(case)
+        stratified: list[WhoWhenCase] = []
+        modes = sorted(by_mode)
+        while len(stratified) < limit and any(by_mode.values()):
+            for mode in modes:
+                if by_mode[mode]:
+                    stratified.append(by_mode[mode].pop(0))
+                    if len(stratified) >= limit:
+                        break
+        return stratified[:limit]
     return selected[:limit]
 
 
@@ -75,6 +94,9 @@ def selection_rows(cases: list[WhoWhenCase]) -> list[dict[str, str | int]]:
                 "prefix_len": len(case.prefix_before_mistake()),
                 "phase2a_status": status,
                 "phase2a_note": note,
+                "failure_mode": infer_failure_mode(
+                    sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth])
+                ),
             }
         )
     return rows

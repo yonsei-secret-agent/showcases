@@ -8,10 +8,11 @@ from ww_card_poc.who_when_io import WhoWhenCase
 
 DEFAULT_CONDITIONS = [
     "no_guidance",
-    "strong_generic_guideline",
+    "coarse_reflection",
+    "broad_verification_card",
     "sanitized_raw_gold_explanation",
-    "oracle_runtime_card",
-    "wrong_mismatched_card",
+    "oracle_specific_card",
+    "hard_mismatched_card",
 ]
 
 
@@ -27,7 +28,8 @@ TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+")
 @dataclass(frozen=True)
 class RuntimeCard:
     failure_mode: str
-    trigger_pattern: str
+    violated_requirement_pattern: str
+    risky_next_action_pattern: str
     do: str
     do_not: str
     check_before_next_action: str
@@ -38,7 +40,8 @@ class RuntimeCard:
             [
                 "Runtime Failure Card",
                 f"Failure mode: {self.failure_mode}",
-                f"Trigger pattern: {self.trigger_pattern}",
+                f"Violated requirement pattern: {self.violated_requirement_pattern}",
+                f"Risky next-action pattern: {self.risky_next_action_pattern}",
                 f"Do: {self.do}",
                 f"Do not: {self.do_not}",
                 f"Check before next action: {self.check_before_next_action}",
@@ -83,7 +86,11 @@ def runtime_guidance_for_mode(failure_mode: str) -> RuntimeCard:
     if failure_mode == "unsupported assumption or fabricated intermediate data":
         return RuntimeCard(
             failure_mode=failure_mode,
-            trigger_pattern=(
+            violated_requirement_pattern=(
+                "Claims, examples, measurements, or intermediate values must be grounded in "
+                "provided evidence, retrieved evidence, or an explicit computation."
+            ),
+            risky_next_action_pattern=(
                 "The next action would introduce data, examples, measurements, or factual claims "
                 "that were not obtained from an available source or computation."
             ),
@@ -100,7 +107,11 @@ def runtime_guidance_for_mode(failure_mode: str) -> RuntimeCard:
     if failure_mode == "unverified or inaccurate factual claim":
         return RuntimeCard(
             failure_mode=failure_mode,
-            trigger_pattern=(
+            violated_requirement_pattern=(
+                "Factual claims that later agents may trust must be verified against a relevant "
+                "source before handoff or finalization."
+            ),
+            risky_next_action_pattern=(
                 "The next action would pass along a factual claim, citation, price, title, date, "
                 "rating, or availability statement that later agents may trust."
             ),
@@ -114,7 +125,11 @@ def runtime_guidance_for_mode(failure_mode: str) -> RuntimeCard:
     if failure_mode == "incomplete handling of task constraints or data cases":
         return RuntimeCard(
             failure_mode=failure_mode,
-            trigger_pattern=(
+            violated_requirement_pattern=(
+                "All stated constraints, filters, exceptions, and edge cases must be preserved "
+                "before computation, extraction, or handoff."
+            ),
+            risky_next_action_pattern=(
                 "The next action uses a simplified rule, parser, or checklist that may miss edge "
                 "cases in the user request or data."
             ),
@@ -128,7 +143,11 @@ def runtime_guidance_for_mode(failure_mode: str) -> RuntimeCard:
     if failure_mode == "irrelevant action or navigation drift":
         return RuntimeCard(
             failure_mode=failure_mode,
-            trigger_pattern=(
+            violated_requirement_pattern=(
+                "Each tool, navigation, or handoff action must directly advance an unmet "
+                "requirement from the original task."
+            ),
+            risky_next_action_pattern=(
                 "The next action would follow a page, link, tool result, or subtask that is not "
                 "directly tied to the original request."
             ),
@@ -142,7 +161,11 @@ def runtime_guidance_for_mode(failure_mode: str) -> RuntimeCard:
     if failure_mode == "premature finalization before sufficient verification":
         return RuntimeCard(
             failure_mode=failure_mode,
-            trigger_pattern="The next action would conclude or terminate before required checks are done.",
+            violated_requirement_pattern=(
+                "A final answer or completion signal must wait until the required evidence, "
+                "constraints, or calculations have been checked."
+            ),
+            risky_next_action_pattern="The next action would conclude or terminate before required checks are done.",
             do="Perform the missing verification or explicitly request the information needed.",
             do_not="Do not finalize while key constraints, evidence, or calculations remain unchecked.",
             check_before_next_action="Name the remaining verification step before any final answer.",
@@ -150,7 +173,11 @@ def runtime_guidance_for_mode(failure_mode: str) -> RuntimeCard:
         )
     return RuntimeCard(
         failure_mode=failure_mode,
-        trigger_pattern="The next action may become the decisive point that propagates an error.",
+        violated_requirement_pattern=(
+            "The next action must be checked against the original task, available evidence, "
+            "and the acting agent's role duties."
+        ),
+        risky_next_action_pattern="The next action may become the decisive point that propagates an error.",
         do="Pause and verify the action against the original task, available evidence, and role duties.",
         do_not="Do not proceed if the action relies on an unchecked assumption.",
         check_before_next_action="State the evidence and constraint check supporting the next action.",
@@ -162,6 +189,55 @@ def build_runtime_card(case: WhoWhenCase) -> RuntimeCard:
     reason = sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth])
     failure_mode = infer_failure_mode(reason)
     return runtime_guidance_for_mode(failure_mode)
+
+
+def _compact_reason(reason: str, *, max_chars: int = 260) -> str:
+    compact = " ".join(reason.split())
+    if len(compact) <= max_chars:
+        return compact
+    return compact[: max_chars - 3].rstrip() + "..."
+
+
+def build_oracle_specific_card(case: WhoWhenCase) -> RuntimeCard:
+    reason = sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth])
+    failure_mode = infer_failure_mode(reason)
+    mode_card = runtime_guidance_for_mode(failure_mode)
+    diagnostic_pattern = _compact_reason(reason)
+    return RuntimeCard(
+        failure_mode=failure_mode,
+        violated_requirement_pattern=(
+            "In this class of failures, the acting agent must guard against this diagnostic "
+            f"pattern: {diagnostic_pattern}"
+        ),
+        risky_next_action_pattern=mode_card.risky_next_action_pattern,
+        do=mode_card.do,
+        do_not=mode_card.do_not,
+        check_before_next_action=mode_card.check_before_next_action,
+        applicable_when=mode_card.applicable_when,
+    )
+
+
+def build_broad_verification_card() -> RuntimeCard:
+    return RuntimeCard(
+        failure_mode="general verification and constraint preservation",
+        violated_requirement_pattern=(
+            "Any next action can fail if it carries forward unchecked facts, assumptions, "
+            "constraints, calculations, or handoff requirements."
+        ),
+        risky_next_action_pattern=(
+            "The next action would proceed without explicitly checking evidence, task constraints, "
+            "and role responsibilities."
+        ),
+        do=(
+            "Before acting, verify the evidence or computation supporting the next step and check "
+            "that it preserves all stated task constraints."
+        ),
+        do_not="Do not rely on unchecked assumptions, incomplete context, or unsupported factual claims.",
+        check_before_next_action=(
+            "What evidence, constraint, or role requirement could make this next action wrong?"
+        ),
+        applicable_when="Use this before any next action in a multi-agent task.",
+    )
 
 
 def leakage_flags(text: str, *, case: WhoWhenCase) -> list[str]:
@@ -207,6 +283,19 @@ def render_condition(
 ) -> tuple[str, dict[str, object]]:
     if condition == "no_guidance":
         return "", {"condition_source": "none"}
+    if condition == "coarse_reflection":
+        text = "\n".join(
+            [
+                "Coarse reflection prompt:",
+                "This trajectory may be heading toward a mistake.",
+                "Before producing the next action, reflect on what could go wrong and avoid it.",
+                "No specific responsible agent, step, or failure explanation is provided.",
+            ]
+        )
+        return text, {"condition_source": "coarse_reflection"}
+    if condition == "broad_verification_card":
+        card = build_broad_verification_card()
+        return card.render(), {"condition_source": "broad_verification_card", "card": card.to_dict()}
     if condition == "strong_generic_guideline":
         text = "\n".join(
             [
@@ -227,12 +316,27 @@ def render_condition(
     if condition == "oracle_runtime_card":
         card = build_runtime_card(case)
         return card.render(), {"condition_source": "oracle_runtime_card", "card": card.to_dict()}
+    if condition == "oracle_specific_card":
+        card = build_oracle_specific_card(case)
+        return card.render(), {"condition_source": "oracle_specific_card", "card": card.to_dict()}
     if condition == "wrong_mismatched_card":
         source = mismatched_case or case
         card = build_runtime_card(source)
         return card.render(), {
             "condition_source": "mismatched_runtime_card",
             "mismatched_source_case_id": source.case_id,
+            "card": card.to_dict(),
+        }
+    if condition == "hard_mismatched_card":
+        if mismatched_case is None or mismatched_case.case_id == case.case_id:
+            raise ValueError(f"No hard mismatched source case available for {case.case_id}.")
+        card = build_oracle_specific_card(mismatched_case)
+        return card.render(), {
+            "condition_source": "hard_mismatched_card",
+            "mismatched_source_case_id": mismatched_case.case_id,
+            "mismatched_source_failure_mode": infer_failure_mode(
+                sanitize_text(mismatched_case.mistake_reason, forbidden_terms=[mismatched_case.ground_truth])
+            ),
             "card": card.to_dict(),
         }
     raise ValueError(f"Unknown condition: {condition}")

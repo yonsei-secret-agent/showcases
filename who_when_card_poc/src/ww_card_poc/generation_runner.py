@@ -23,6 +23,7 @@ class GenerationRecord:
     prefix_len: int
     model: str
     temperature: float
+    seed: int
     prompt_hash: str
     output_text: str
     finish_reason: str
@@ -131,18 +132,23 @@ def run_generations(
                     output_text = "[DRY_RUN] Model call skipped."
                     finish_reason = "dry_run"
                 else:
+                    seed = settings.experiment_seed + attempt
                     try:
                         response = client.complete(
                             model=settings.models.generation_model,
                             messages=generation_messages(input_record),
                             temperature=temperature,
                             max_tokens=settings.models.max_output_tokens,
+                            seed=seed,
                         )
                         output_text = response.content
                         finish_reason = response.finish_reason
                         usage = response.usage
+                        usage["system_fingerprint"] = response.raw.get("system_fingerprint", "")
                     except ModelClientError as exc:
                         error = str(exc)
+                if dry_run:
+                    seed = settings.experiment_seed + attempt
                 record = GenerationRecord(
                     run_id=run_id,
                     attempt=attempt,
@@ -152,8 +158,9 @@ def run_generations(
                     responsible_agent=str(input_record["responsible_agent"]),
                     intervention_step=int(input_record["intervention_step"]),
                     prefix_len=int(input_record["prefix_len"]),
-                    model=settings.models.generation_model,
+                    model=response.model if not dry_run and not error else settings.models.generation_model,
                     temperature=temperature,
+                    seed=seed,
                     prompt_hash=prompt_hash(system_prompt, user_prompt),
                     output_text=output_text,
                     finish_reason=finish_reason,

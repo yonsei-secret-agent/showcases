@@ -3,14 +3,14 @@
 ## 상태
 
 ```text
-status: planned
-type: next experiment spec
-scope: attribution specificity gate, then small cross-trace transfer probe
+status: Experiment 2A smoke completed
+type: executed smoke + next experiment spec
+scope: attribution specificity gate completed, cross-trace transfer probe not yet run
 ```
 
-Experiment 2는 아직 실행 전이다.
+Experiment 2A smoke는 2026-06-27에 실행했다.
 
-이 문서는 실행자가 바로 구현할 수 있도록 목표, 질문, 조건, 관찰 항목, 판정 기준, 결과 기록 템플릿을 정리한다.
+이 문서는 실험 목표, 질문, 조건, 관찰 항목, 실행 결과, 해석, 다음 단계를 함께 기록한다.
 
 문서 역할:
 
@@ -498,18 +498,74 @@ Experiment 2B에서 관찰할 것:
 4. transfer card가 target task에 negative transfer를 만들지는 않는가?
 ```
 
-## 결과 기록 템플릿
+## 실행된 과정
+
+Experiment 2A smoke는 다음 순서로 실행했다.
+
+```text
+1. shared base prompt에서 "failed trajectory" 표현 제거
+2. neutral prompt 기준 no_guidance recurrence pretest 재실행
+3. recurrence >= 0.4인 failure-prone case 재선정
+4. oracle_specific_card / broad_verification_card / hard_mismatched_card 조건 생성
+5. exact-match leakage flag가 뜬 case는 main matrix에서 제외
+6. 6 conditions × 2 attempts generation
+7. blind LLM judge 실행
+8. oracle_specific_card secondary LLM leakage audit 실행
+```
+
+pretest:
+
+```text
+candidate cases: 20
+condition: no_guidance
+attempts: 3
+generation records: 60
+judgment records: 60
+errors: 0
+repair_success_rate: 0.3667
+same_failure_recurrence_rate: 0.5667
+failure-prone cases at recurrence >= 0.4: 12
+```
+
+main smoke:
+
+```text
+selected failure-prone cases: 12
+excluded for exact-match leakage: 1
+used cases: 11
+conditions: 6
+attempts: 2
+generation records: 132
+judgment records: 132
+errors: 0
+hard mismatch source:
+  algorithm_generated:90 was used as the orthogonal source for all 11 target cases
+```
+
+leakage audit:
+
+```text
+exact-match leakage block:
+  algorithm_generated:2 excluded from the main matrix
+
+secondary LLM leakage audit on oracle_specific_card:
+  audited cards: 11
+  leakage=true: 0
+  severity: 11 low, 0 medium/high
+```
+
+## 결과
 
 ### Experiment 2A summary
 
 | condition | n | repair_success_rate | same_failure_recurrence_rate | mean_score | negative_transfer_rate |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| no_guidance | TBD | TBD | TBD | TBD | TBD |
-| coarse_reflection | TBD | TBD | TBD | TBD | TBD |
-| broad_verification_card | TBD | TBD | TBD | TBD | TBD |
-| sanitized_raw_gold_explanation | TBD | TBD | TBD | TBD | TBD |
-| oracle_specific_card | TBD | TBD | TBD | TBD | TBD |
-| hard_mismatched_card | TBD | TBD | TBD | TBD | TBD |
+| no_guidance | 22 | 0.0909 | 0.9091 | 0.9091 | 0.2273 |
+| coarse_reflection | 22 | 0.0909 | 0.9091 | 1.0909 | 0.4545 |
+| broad_verification_card | 22 | 0.2273 | 0.6364 | 1.5909 | 0.0909 |
+| sanitized_raw_gold_explanation | 22 | 0.2727 | 0.6364 | 1.5000 | 0.2273 |
+| oracle_specific_card | 22 | 0.6364 | 0.2727 | 2.3182 | 0.0909 |
+| hard_mismatched_card | 22 | 0.2727 | 0.6818 | 1.5455 | 0.2273 |
 
 ### Specificity metrics
 
@@ -535,11 +591,59 @@ recurrence_specificity_lift =
   - recurrence_rate(oracle_specific_card)
 ```
 
-### Case-level matrix
+observed:
 
-| case_id | failure_mode | attempt | no_guidance | coarse_reflection | broad_verification | raw_gold | oracle_specific | hard_mismatch | notes |
-| --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+```text
+specificity_lift:
+  oracle_specific_card - max(coarse_reflection, broad_verification_card, hard_mismatched_card)
+  = 0.6364 - 0.2727
+  = +0.3637
+
+right_vs_wrong_lift:
+  oracle_specific_card - hard_mismatched_card
+  = +0.3637
+
+nudge_gap:
+  oracle_specific_card - broad_verification_card
+  = +0.4091
+
+oracle_vs_raw_gold:
+  oracle_specific_card - sanitized_raw_gold_explanation
+  = +0.3637
+
+recurrence_specificity_lift:
+  hard_mismatched_card recurrence - oracle_specific_card recurrence
+  = 0.6818 - 0.2727
+  = +0.4091
+```
+
+### Case-Level Paired Contrasts
+
+| contrast | cases | repair_success_delta | recurrence_reduction_delta |
+| --- | ---: | ---: | ---: |
+| oracle_specific_vs_no_guidance | 11 | 0.5455 | 0.6364 |
+| oracle_specific_vs_broad_verification | 11 | 0.4091 | 0.3636 |
+| oracle_specific_vs_hard_mismatch | 11 | 0.3636 | 0.4091 |
+| oracle_specific_vs_raw_gold | 11 | 0.3636 | 0.3636 |
+| oracle_specific_vs_coarse_reflection | 11 | 0.5455 | 0.6364 |
+
+### Case-Level Matrix
+
+Values are case-level mean repair_success over 2 attempts.
+
+| case_id | no_guidance | coarse_reflection | broad_verification | raw_gold | oracle_specific | hard_mismatch |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| algorithm_generated:13 | 0.0 | 1.0 | 0.0 | 1.0 | 1.0 | 1.0 |
+| algorithm_generated:17 | 0.0 | 0.0 | 0.5 | 0.0 | 1.0 | 0.0 |
+| algorithm_generated:26 | 0.0 | 0.0 | 0.0 | 1.0 | 1.0 | 0.0 |
+| algorithm_generated:31 | 0.0 | 0.0 | 0.0 | 0.0 | 1.0 | 0.5 |
+| algorithm_generated:38 | 0.0 | 0.0 | 1.0 | 0.0 | 0.0 | 0.0 |
+| algorithm_generated:4 | 0.0 | 0.0 | 0.0 | 0.0 | 1.0 | 0.5 |
+| algorithm_generated:62 | 0.0 | 0.0 | 0.5 | 0.0 | 0.5 | 0.5 |
+| algorithm_generated:7 | 0.0 | 0.0 | 0.0 | 0.0 | 1.0 | 0.0 |
+| algorithm_generated:8 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| algorithm_generated:97 | 1.0 | 0.0 | 0.5 | 0.0 | 0.5 | 0.5 |
+| algorithm_generated:99 | 0.0 | 0.0 | 0.0 | 1.0 | 0.0 | 0.0 |
 
 Qualitative buckets:
 
@@ -550,6 +654,16 @@ mismatch_only_success
 nudge_only_success
 all_success
 all_failure
+```
+
+observed qualitative notes:
+
+```text
+hard_mismatched_card no longer outperformed oracle_specific_card.
+oracle_specific_card clearly outperformed broad_verification_card in this smoke.
+coarse_reflection did not improve over no_guidance in aggregate.
+some cases still respond to raw_gold or hard_mismatch, so powered run and qualitative audit remain necessary.
+hard mismatch source diversity is weak in this smoke because a single orthogonal source card was reused.
 ```
 
 ## Go / No-Go 기준

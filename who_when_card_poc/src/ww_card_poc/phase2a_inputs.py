@@ -66,7 +66,7 @@ def build_user_prompt(case: WhoWhenCase, condition_text: str) -> str:
     guidance = condition_text.strip() or "No additional guidance is provided."
     return "\n\n".join(
         [
-            "You are continuing a failed multi-agent trajectory from a prefix.",
+            "You are continuing a multi-agent trajectory from a prefix.",
             "Original task:\n" + case.question,
             "Agent roster:\n" + (_agent_roster(case) or "(unknown)"),
             "Trajectory prefix before your next action:\n" + _history_prefix_text(case),
@@ -85,26 +85,69 @@ def _failure_mode(case: WhoWhenCase) -> str:
     return infer_failure_mode(sanitize_text(case.mistake_reason, forbidden_terms=[case.ground_truth]))
 
 
-def _mismatched_case(case: WhoWhenCase, cases: list[WhoWhenCase], case_index: int) -> WhoWhenCase:
-    if len(cases) <= 1:
-        return case
+ORTHOGONAL_MODE_PREFERENCES = {
+    "unsupported assumption or fabricated intermediate data": [
+        "irrelevant action or navigation drift",
+        "premature finalization before sufficient verification",
+        "incomplete handling of task constraints or data cases",
+    ],
+    "unverified or inaccurate factual claim": [
+        "irrelevant action or navigation drift",
+        "premature finalization before sufficient verification",
+        "incomplete handling of task constraints or data cases",
+    ],
+    "incomplete handling of task constraints or data cases": [
+        "irrelevant action or navigation drift",
+        "unsupported assumption or fabricated intermediate data",
+        "premature finalization before sufficient verification",
+    ],
+    "irrelevant action or navigation drift": [
+        "incomplete handling of task constraints or data cases",
+        "unsupported assumption or fabricated intermediate data",
+        "unverified or inaccurate factual claim",
+    ],
+    "premature finalization before sufficient verification": [
+        "irrelevant action or navigation drift",
+        "incomplete handling of task constraints or data cases",
+        "unsupported assumption or fabricated intermediate data",
+    ],
+    "decisive reasoning or execution error": [
+        "irrelevant action or navigation drift",
+        "incomplete handling of task constraints or data cases",
+        "unsupported assumption or fabricated intermediate data",
+    ],
+}
+
+
+def _mismatched_case(case: WhoWhenCase, cases: list[WhoWhenCase]) -> WhoWhenCase | None:
     target_mode = _failure_mode(case)
-    for offset in range(1, len(cases)):
-        candidate = cases[(case_index + offset) % len(cases)]
-        if candidate.case_id != case.case_id and _failure_mode(candidate) != target_mode:
-            return candidate
-    return cases[(case_index + 1) % len(cases)]
+    by_mode: dict[str, list[WhoWhenCase]] = {}
+    for candidate in cases:
+        if candidate.case_id == case.case_id:
+            continue
+        by_mode.setdefault(_failure_mode(candidate), []).append(candidate)
+
+    for preferred_mode in ORTHOGONAL_MODE_PREFERENCES.get(target_mode, []):
+        candidates = by_mode.get(preferred_mode, [])
+        if candidates:
+            return candidates[0]
+    return None
 
 
 def build_phase2a_inputs(
     cases: list[WhoWhenCase],
     *,
     conditions: list[str] | None = None,
+    mismatch_pool: list[WhoWhenCase] | None = None,
+    block_leakage: bool = True,
 ) -> list[Phase2AInput]:
     active_conditions = conditions or DEFAULT_CONDITIONS
+    mismatch_candidates = mismatch_pool or cases
     records: list[Phase2AInput] = []
-    for case_index, case in enumerate(cases):
-        mismatched_case = _mismatched_case(case, cases, case_index)
+    for case in cases:
+        mismatched_case = _mismatched_case(case, mismatch_candidates)
+        case_records: list[Phase2AInput] = []
+        blocked_by_leakage = False
         for condition in active_conditions:
             condition_text, metadata = render_condition(
                 condition,
@@ -112,11 +155,14 @@ def build_phase2a_inputs(
                 mismatched_case=mismatched_case,
             )
             flags = leakage_flags(condition_text, case=case)
+            if block_leakage and flags:
+                blocked_by_leakage = True
+                break
             step = case.mistake_step
             if step is None:
                 continue
             run_id = f"phase2a__{case.case_id.replace(':', '_')}__{condition}"
-            records.append(
+            case_records.append(
                 Phase2AInput(
                     run_id=run_id,
                     case_id=case.case_id,
@@ -134,10 +180,14 @@ def build_phase2a_inputs(
                         "question_id": case.question_id,
                         "dataset_type": case.dataset_type,
                         "history_len": case.history_len,
+                        "target_failure_mode": _failure_mode(case),
                         "mistake_reason": case.mistake_reason,
+                        "leakage_blocked": False,
                     },
                 )
             )
+        if not blocked_by_leakage:
+            records.extend(case_records)
     return records
 
 

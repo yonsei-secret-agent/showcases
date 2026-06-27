@@ -34,6 +34,7 @@ class ModelClient:
         messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int | None = None,
+        seed: int | None = None,
     ) -> ModelResponse:
         api = self.settings.api
         if not api.active_api_key:
@@ -46,6 +47,8 @@ class ModelClient:
         }
         if max_tokens is not None:
             body["max_tokens"] = max_tokens
+        if seed is not None:
+            body["seed"] = seed
         if api.backend == "openrouter":
             provider_order = [
                 provider.strip()

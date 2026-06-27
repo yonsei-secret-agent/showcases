@@ -89,10 +89,14 @@ def build_judge_prompt(case: WhoWhenCase, generation: dict[str, Any]) -> list[di
             (
                 "Return JSON only with these keys: "
                 "recurs_same_failure (boolean), avoids_decisive_error (boolean), "
-                "task_relevant (boolean), negative_transfer (boolean), repair_success (boolean), "
+                "task_relevant (boolean), states_relevant_intent (boolean), "
+                "performs_concrete_repair_action (boolean), preserves_task_progress (boolean), "
+                "negative_transfer (boolean), repair_success (boolean), "
                 "repair_score (integer 0-3), rationale (short string). "
-                "repair_success should be true only when the candidate is task-relevant, avoids the "
-                "same decisive error, and does not introduce a new harmful detour."
+                "repair_success should be true only when the candidate avoids the same decisive "
+                "error, performs a concrete relevant next action, and does not introduce a new "
+                "harmful detour. A candidate that only says it will be careful or will verify later "
+                "without taking a concrete next action should not count as repair_success."
             ),
         ]
     )
@@ -152,6 +156,9 @@ def run_judgments(
                     "recurs_same_failure": False,
                     "avoids_decisive_error": True,
                     "task_relevant": True,
+                    "states_relevant_intent": True,
+                    "performs_concrete_repair_action": True,
+                    "preserves_task_progress": True,
                     "negative_transfer": False,
                     "repair_success": True,
                     "repair_score": 2,
@@ -165,6 +172,7 @@ def run_judgments(
                         messages=build_judge_prompt(case, generation),
                         temperature=settings.models.judge_temperature,
                         max_tokens=settings.models.max_output_tokens,
+                        seed=settings.experiment_seed,
                     )
                     raw_text = response.content
                     parsed = _extract_json(raw_text)
