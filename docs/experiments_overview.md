@@ -47,6 +47,7 @@ Experiment 2
 Experiment 3
   Abstraction stress test + judge decoupling
   status: next
+  structure: Exp3a offline audit -> Exp3b minimal generation
   doc: docs/experiment3.md
 
 Experiment 4
@@ -176,6 +177,18 @@ decoupled judge에서도 oracle advantage 유지
 manipulation check에서 intended mode/check가 복원됨
 ```
 
+실행 구조:
+
+```text
+Exp3a:
+  offline abstraction audit
+  broad와의 distinctness, manipulation check, leakage check
+
+Exp3b:
+  minimal generation
+  decoupled judge 우선
+```
+
 통과하면:
 
 ```text
@@ -206,6 +219,19 @@ Experiment 4의 목적:
 ```text
 source failure에서 만든 abstract card가
 held-out target trace에도 transfer되는지 확인한다.
+```
+
+단, Experiment 4는 Experiment 3 결과에 따라 두 갈래로 나뉜다.
+
+```text
+oracle_abstracted > mode_only > broad:
+  abstract failure-memory transfer로 진행
+
+mode_only ~= oracle_abstracted > broad:
+  mode-routing / retrieval transfer로 재프레이밍
+
+oracle_abstracted ~= broad:
+  Exp4 보류, renderer/broad baseline 재검토
 ```
 
 주의:
@@ -240,6 +266,7 @@ Experiment 3 passes:
 Experiment 3 collapses:
   do not scale same-trace repair.
   inspect literal diagnosis / judge coupling.
+  prepare routing or closed-loop pivot.
 
 Experiment 4 passes:
   consider powered transfer or runnable closed-loop benchmark.
