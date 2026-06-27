@@ -69,13 +69,24 @@ banking_knowledge
 3. final reward가 DB state / communicated info 중심이라 LLM judge circularity가 줄어든다.
 ```
 
-공식 문서상 airline / retail / telecom의 기본 reward는 대체로 `DB + COMMUNICATE` outcome 중심이다.
+공식 문서상 tau2 scoring은 task의 `reward_basis`에 따라 final reward를 계산한다.
+clone한 현재 repo 기준으로 retail task 0-4는 `DB + NL_ASSERTION`을 사용했다.
+따라서 domain과 task version별 reward basis를 실제 `tasks.json`에서 확인해야 한다.
+
 `actions`는 하나의 reference trajectory이지, agent가 반드시 그대로 따라야 하는 유일한 정답 경로가 아니다.
 이 점이 중요하다.
 
 ```text
 우리의 primary metric은 "judge가 보기 좋은 action"이 아니라
 tau2 evaluator가 인정하는 final outcome success다.
+```
+
+주의:
+
+```text
+NL_ASSERTION이 reward_basis에 포함된 task는 일부 LLM-judged component를 포함한다.
+그래도 Who&When의 card-aligned repair judge와는 다르다.
+tau2 evaluator는 card 내용을 보지 않고 task outcome 기준으로 판정한다.
 ```
 
 참고:
@@ -340,6 +351,7 @@ tool calls
 final reward
 db reward
 communicate reward
+nl assertion reward
 action diagnostics if available
 failure summary
 ```

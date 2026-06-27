@@ -1,0 +1,6 @@
+/third_party/
+/tau2_card_poc/.env
+/tau2_card_poc/data/
+/tau2_card_poc/reports/
+__pycache__/
+.pytest_cache/
