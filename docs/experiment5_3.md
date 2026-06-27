@@ -161,7 +161,7 @@ include:
   - mixed tasks when they add failure-type diversity
   - no more than 3 availability-count tasks
 
-exclude:
+exclude from primary set:
   - 109, 110, 111 because they form a similar multi-update cluster with
     possible evaluator/policy tension
   - 33 because it is a weaker mixed WFH/address case covered more cleanly
@@ -197,6 +197,18 @@ mixed but useful diversity cases:
 This is intentionally not all stable failures. The stable-failure pool is
 heavily weighted toward DB/write mutation tasks, so adding mixed tasks is
 necessary to avoid a one-mode rescue pilot.
+
+The excluded tasks should not simply disappear from the record. Before the
+final report, audit them as an exclusion/sensitivity set:
+
+```text
+109, 110, 111:
+  inspect baseline traces, or run no_memory-only checks if needed, to document
+  whether evaluator/tool/policy tension makes them invalid rescue targets
+
+33:
+  document as a near-duplicate weaker mixed WFH/address case relative to 34
+```
 
 최종 실행 전에는 template을 복사해 task/card를 채운다.
 
