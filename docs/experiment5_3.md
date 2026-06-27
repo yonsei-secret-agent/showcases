@@ -3,7 +3,7 @@
 ## 상태
 
 ```text
-status: blocked_on_experiment5_2_harvest
+status: selected_tasks_ready
 type: runnable rescue pilot
 benchmark: tau2-bench retail
 target scale: 20 selected tasks x 4 conditions x 3 seeds
@@ -142,6 +142,61 @@ Template manifest:
 ```text
 tau2_card_poc/experiments/exp5_3_rescue_20_template.json
 ```
+
+## Selected 20-Task Set
+
+Experiment 5.2 produced 24 candidate tasks with at least two baseline failures.
+For Experiment 5.3, use the following 20:
+
+```text
+1, 2, 3, 4, 7, 16, 19, 20, 27, 28,
+34, 36, 41, 71, 95, 98, 99, 103, 104, 112
+```
+
+Selection rule:
+
+```text
+include:
+  - stable failures when they are actionable and not obviously ambiguous
+  - mixed tasks when they add failure-type diversity
+  - no more than 3 availability-count tasks
+
+exclude:
+  - 109, 110, 111 because they form a similar multi-update cluster with
+    possible evaluator/policy tension
+  - 33 because it is a weaker mixed WFH/address case covered more cleanly
+    by task 34
+```
+
+Approximate distribution:
+
+```text
+availability-count / communication:
+  2, 3, 4
+
+refund / price / calculation communication:
+  16, 19, 28, 95
+
+exchange / product-variant selection:
+  1, 7, 27, 98, 99
+
+address, profile, order mutation, and multi-action DB updates:
+  20, 34, 36, 41, 71, 103, 104, 112
+```
+
+Stability mix:
+
+```text
+stable baseline failures:
+  2, 3, 4, 20, 27, 28, 34, 41, 71, 98, 103, 104
+
+mixed but useful diversity cases:
+  1, 7, 16, 19, 36, 95, 99, 112
+```
+
+This is intentionally not all stable failures. The stable-failure pool is
+heavily weighted toward DB/write mutation tasks, so adding mixed tasks is
+necessary to avoid a one-mode rescue pilot.
 
 최종 실행 전에는 template을 복사해 task/card를 채운다.
 

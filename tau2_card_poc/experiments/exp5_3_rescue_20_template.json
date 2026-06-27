@@ -4,7 +4,7 @@
   "domain": "retail",
   "agent_model": "gpt-4.1-mini",
   "user_model": "gpt-4.1-mini",
-  "task_ids": [],
+  "task_ids": [1, 2, 3, 4, 7, 16, 19, 20, 27, 28, 34, 36, 41, 71, 95, 98, 99, 103, 104, 112],
   "seeds": [501, 502, 503],
   "conditions": [
     {
