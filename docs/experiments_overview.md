@@ -31,6 +31,16 @@ Who&When same-trace:
 
 따라서 다음 실험은 무작정 scale-up하지 않고, 아래 gate를 순서대로 통과해야 한다.
 
+현재 가장 중요한 방향 전환:
+
+```text
+Who&When track:
+  feasibility / specificity / abstraction diagnostic로 사용
+
+tau2-bench track:
+  objective retry success를 보는 runnable PoC로 이동
+```
+
 ## 실험 흐름
 
 ```text
@@ -46,24 +56,29 @@ Experiment 2
 
 Experiment 3
   Abstraction stress test + judge decoupling
-  status: next
-  structure: Exp3a offline audit -> Exp3b minimal generation
+  status: completed smoke
+  summary: weak-positive, judge-dependent signal
   doc: docs/experiment3.md
 
 Experiment 4
   Cross-trace transfer lite
-  status: planned after Experiment 3
+  status: deferred / conditional
   doc: docs/experiment4.md
 
 Experiment 5
-  Predicted card content utility
-  status: gated
+  tau2-bench runnable rescue pilot
+  status: next planned track
+  doc: docs/experiment5.md
 
 Experiment 6
-  Runnable closed-loop self-improving agent
-  status: gated by transfer signal
+  Predicted card content utility
+  status: gated by runnable rescue signal
 
 Experiment 7
+  Runnable closed-loop self-improving agent
+  status: gated by transfer / rescue signal
+
+Experiment 8
   Predicted intervention point
   status: gated
 ```
@@ -138,7 +153,7 @@ same-trace specificity smoke로는 좋은 신호.
 하지만 아직 literal gold diagnosis / judge coupling / same-trace clairvoyance 위험이 남아 있음.
 ```
 
-## Next Gate: Experiment 3
+## Experiment 3 Summary
 
 Experiment 3의 목적:
 
@@ -152,54 +167,37 @@ repair signal이 유지되는지 확인한다.
 ```text
 broad_verification_card
 correct_mode_only_placebo
-oracle_specific_card_current
 oracle_abstracted_card
 hard_mismatched_abstracted_card
 ```
 
-핵심 judge 변경:
+실행 결과:
 
 ```text
-diagnostic judge:
-  기존과 유사, gold reason을 봄
+abstract-criterion judge:
+  oracle_abstracted repair = 0.6364
+  broad_verification repair = 0.2727
+  hard_mismatch repair = 0.4091
 
-decoupled judge:
-  gold reason 원문과 original failed action을 보지 않음
+failure-anchored judge:
+  oracle_abstracted repair = 0.6364
+  broad_verification repair = 0.5455
+  hard_mismatch repair = 0.4545
 ```
 
-통과 기준:
+해석:
 
 ```text
-oracle_abstracted_card > broad_verification_card
-oracle_abstracted_card > correct_mode_only_placebo
-oracle_abstracted_card > hard_mismatched_abstracted_card
-decoupled judge에서도 oracle advantage 유지
-manipulation check에서 intended mode/check가 복원됨
+oracle signal은 일부 살아남았지만,
+judge criterion을 card-derived check에서 떼어내면 advantage가 크게 줄었다.
 ```
 
-실행 구조:
+현재 판단:
 
 ```text
-Exp3a:
-  offline abstraction audit
-  broad와의 distinctness, manipulation check, leakage check
-
-Exp3b:
-  minimal generation
-  decoupled judge 우선
-```
-
-통과하면:
-
-```text
-Experiment 4 cross-trace transfer lite
-```
-
-붕괴하면:
-
-```text
-Who&When same-trace track을 powered run으로 키우지 않는다.
-content specificity 대신 retrieval/routing/closed-loop benchmark로 pivot을 검토한다.
+Who&When same-trace track은 가능성 확인용으로는 충분했다.
+하지만 이를 powered run으로 키우기보다,
+objective runnable benchmark인 tau2-bench로 이동한다.
 ```
 
 중요한 분해:
@@ -212,7 +210,7 @@ oracle_abstracted_card - correct_mode_only_placebo:
   missing-check/action abstraction의 추가 가치
 ```
 
-## Next Transfer Probe: Experiment 4
+## Deferred Transfer Probe: Experiment 4
 
 Experiment 4의 목적:
 
@@ -251,6 +249,44 @@ agent가 스스로 memory를 retrieve했다는 claim은 금지.
 
 ```text
 Under oracle retrieval, attribution-derived abstract cards can act as reusable failure memory.
+```
+
+현재는 Experiment 5 tau2-bench runnable rescue pilot을 먼저 실행한다.
+
+이유:
+
+```text
+Exp4는 여전히 Who&When trace-prefix proxy다.
+Exp5는 official task reward로 retry rescue를 직접 본다.
+```
+
+## Next Runnable Probe: Experiment 5
+
+Experiment 5의 목적:
+
+```text
+tau2-bench failed task에서 만든 attribution-derived card가
+fresh retry의 official reward를 올리는지 확인한다.
+```
+
+핵심 차이:
+
+```text
+Who&When:
+  same-trace next-action proxy
+
+tau2-bench:
+  rerunnable task, fresh environment, official final reward
+```
+
+첫 pilot은 paper-level evidence가 아니라 team-convincing PoC다.
+
+성공하면:
+
+```text
+existing runnable benchmark 위에서
+failure attribution -> memory -> retry success
+흐름에 실제 가능성이 있음을 보여준다.
 ```
 
 단, `source_mode_only_placebo`와 비교해야 한다.

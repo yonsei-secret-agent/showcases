@@ -941,14 +941,18 @@ Experiment 4:
   source failure card가 held-out target trace에도 transfer되는지 확인.
 
 Experiment 5:
-  Predicted card content utility.
-  gold who/when은 고정하고, all_at_once / step_by_step / binary_search의 predicted why/card만 비교.
+  tau2-bench runnable rescue pilot.
+  existing runnable benchmark에서 failure attribution -> memory -> retry success를 확인.
 
 Experiment 6:
-  Runnable closed-loop self-improving agent.
-  Experiment 4 transfer가 broad/generic baseline을 이긴 뒤에만 큰 엔지니어링으로 진행.
+  Predicted card content utility.
+  runnable rescue signal 이후 predicted attribution에서 만든 card를 비교.
 
 Experiment 7:
+  Runnable closed-loop self-improving agent.
+  fail -> attribute -> store -> retrieve -> retry / held-out success loop를 검증.
+
+Experiment 8:
   Predicted intervention point.
   predicted who/when으로 어디에 누구에게 개입해야 하는지 평가.
 ```
