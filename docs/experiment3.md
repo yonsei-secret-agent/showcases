@@ -164,6 +164,29 @@ hard_mismatched_abstracted_card
 removed_literal_terms
 missing_check_type
 abstract_corrective_action
+abstraction_level
+abstractiveness_rationale
+```
+
+Required artifact fields:
+
+```text
+abstraction_level:
+  mode_only
+  check_type
+  action_schema
+  too_literal
+
+removed_literal_terms:
+  entity
+  value
+  named object
+  answer-like phrase
+  original failed-action phrase
+
+abstractiveness_rationale:
+  why this card is narrower than broad_verification_card
+  and why it is less literal than the source mistake_reason
 ```
 
 Audit checks:
@@ -343,6 +366,19 @@ broad:
 oracle_abstracted:
   one missing-check type + one targeted abstract corrective action
 ```
+
+Format/salience matching:
+
+```text
+broad_verification_card and oracle_abstracted_card must use:
+  same visible card schema
+  same section order
+  similar length
+  similar imperative strength
+  similar warning language
+```
+
+즉, broad는 약한 baseline이 아니라 **wide-shallow but format-matched strong baseline**이어야 한다.
 
 예:
 
@@ -743,6 +779,7 @@ Who&When same-trace repair를 powered run으로 키우면 매몰 위험이 크�
 
 ```text
 docs/experiment3.md
+who_when_card_poc/data/interim/exp3_abstraction_audit.jsonl
 who_when_card_poc/reports/exp3_abstraction_stress_summary.md
 who_when_card_poc/data/runs/exp3_abstraction_stress_generations.jsonl
 who_when_card_poc/data/judgments/exp3_abstraction_stress_judgments.jsonl

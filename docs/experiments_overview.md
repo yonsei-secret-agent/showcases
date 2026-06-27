@@ -221,6 +221,12 @@ source failure에서 만든 abstract card가
 held-out target trace에도 transfer되는지 확인한다.
 ```
 
+이 단계는 삭제된 것이 아니라 Exp3 이후로 지연된 것이다.
+
+```text
+Cross-trace transfer is deferred, not removed.
+```
+
 단, Experiment 4는 Experiment 3 결과에 따라 두 갈래로 나뉜다.
 
 ```text

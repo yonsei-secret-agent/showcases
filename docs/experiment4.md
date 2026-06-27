@@ -13,6 +13,13 @@ Experiment 4는 Experiment 3가 통과했을 때 실행하는 작은 transfer pr
 
 단, Experiment 3 결과에 따라 Experiment 4의 형태가 달라진다.
 
+Cross-trace transfer는 스킵된 것이 아니라 지연된 것이다.
+
+```text
+Cross-trace transfer is deferred, not removed.
+Experiment 4 should follow if Experiment 3 survives abstraction.
+```
+
 ```text
 Exp3 result: oracle_abstracted > mode_only > broad
   Run Experiment 4 as abstract failure-memory transfer.
