@@ -881,9 +881,9 @@ Failure Card as reusable failure memory.
 다음 단계:
 
 ```text
-1. Experiment 2A smoke였다면 powered run으로 확장
-2. Experiment 2A powered gate가 통과했다면 Experiment 2B cross-trace transfer
-3. 2B에서 transfer가 broad/generic baseline을 이기면 predicted Who&When attribution method 추가
+1. Experiment 3 abstraction stress test로 literal diagnosis / judge coupling 위험 확인
+2. Experiment 3가 붕괴하지 않으면 Experiment 4 cross-trace transfer lite 실행
+3. Experiment 4에서 transfer가 broad/generic baseline을 이기면 powered run 또는 closed-loop 설계
 ```
 
 ### Soft go가 나오는 경우
@@ -929,19 +929,26 @@ Experiment 1:
   완료.
 
 Experiment 2:
-  Specificity gate + small cross-trace transfer probe.
-  다음 단계.
+  Specificity smoke.
+  완료.
 
 Experiment 3:
+  Abstraction stress test + judge decoupling.
+  literal gold reason을 제거해도 oracle advantage가 유지되는지 확인.
+
+Experiment 4:
+  Cross-trace transfer lite.
+  source failure card가 held-out target trace에도 transfer되는지 확인.
+
+Experiment 5:
   Predicted card content utility.
   gold who/when은 고정하고, all_at_once / step_by_step / binary_search의 predicted why/card만 비교.
 
-Experiment 4:
+Experiment 6:
   Runnable closed-loop self-improving agent.
-  Experiment 2B transfer가 broad/generic baseline을 이긴 뒤에만 큰 엔지니어링으로 진행.
-  먼저 oracle memory로 fail -> attribute -> card memory -> retry / held-out improvement 확인.
+  Experiment 4 transfer가 broad/generic baseline을 이긴 뒤에만 큰 엔지니어링으로 진행.
 
-Experiment 5:
+Experiment 7:
   Predicted intervention point.
   predicted who/when으로 어디에 누구에게 개입해야 하는지 평가.
 ```
@@ -950,6 +957,9 @@ Experiment 5:
 
 ```text
 docs/experiment1.md
+docs/experiments_overview.md
+docs/experiment3.md
+docs/experiment4.md
 docs/experiment_2_specificity_and_transfer_plan.md
 docs/experiment_1_feedback_and_next_steps.md
 docs/who_when_phase2a_smoke_results.md

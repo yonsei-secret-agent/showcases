@@ -6,6 +6,13 @@ This is the detailed companion plan. The canonical execution doc is:
 docs/experiment2.md
 ```
 
+Current follow-up docs after the completed Experiment 2A smoke:
+
+```text
+docs/experiment3.md  # abstraction stress test + judge decoupling
+docs/experiment4.md  # cross-trace transfer lite
+```
+
 ## North Star
 
 The research goal is not merely to show that an extra prompt helps.
@@ -70,26 +77,32 @@ Level 0. Same-trace gold-point repair
   Shows local behavioral repair is possible.
 
 Level 1. Attribution specificity gate
-  Next immediate experiment.
+  Completed as Experiment 2A smoke.
   Tests whether precise attribution beats coarse reflection and generic nudge.
 
-Level 2. Cross-trace transfer
+Level 2. Abstraction stress test
+  Next immediate experiment.
+  Tests whether the same-trace signal survives when literal gold diagnosis is removed and the judge
+  is decoupled from the gold reason text.
+
+Level 3. Cross-trace transfer
   Tests whether a lesson from one failed trace helps a held-out similar failure.
   This is the first real reusable-memory signal.
 
-Level 3. Predicted card content utility
+Level 4. Predicted card content utility
   Keeps gold who/when fixed and tests whether all_at_once / step_by_step / binary_search
   predicted why/card content is useful.
 
-Level 4. Closed-loop self-improving agent
+Level 5. Closed-loop self-improving agent
   Built only after transfer beats coarse/generic baselines.
   First test oracle memory in fail -> attribute -> card memory -> retry / held-out improvement.
 
-Level 5. Predicted intervention utility
+Level 6. Predicted intervention utility
   Tests predicted who/when and therefore where and to whom the system should inject memory.
 ```
 
-Experiment 2 covers Levels 1 and a small probe for Level 2.
+Experiment 2 covered Level 1 as a smoke. Experiment 3 covers Level 2. Experiment 4 covers a small
+probe for Level 3.
 
 ## Experiment 2A: Specificity Gate
 
@@ -826,33 +839,29 @@ Do not let a changed prompt/card renderer reuse old generations just because run
 ## Recommended Immediate Implementation Order
 
 ```text
-0. Remove shared base-prompt failure awareness.
-1. Implement v0.2 condition names and card schema.
-2. Add oracle_specific_card renderer.
-3. Add broad_verification_card and coarse_reflection conditions.
-4. Add hard mismatch pairing table / selector with orthogonality notes.
-5. Remove automatic hard-mismatch fallback.
-6. Add stratified case selection by failure mode.
-7. Rerun no_guidance recurrence pretest with the neutral base prompt.
-8. Extend judge schema for concrete-vs-intent verification.
-9. Add case-level matrix and paired metrics.
-10. Run Experiment 2A smoke.
-11. Write docs/who_when_phase2a_specificity_v2_smoke_results.md.
-12. If Experiment 2A smoke is sane, run the powered 2A gate.
-13. If powered 2A passes, run a small Experiment 2B cross-trace transfer probe.
+0. Treat Experiment 2A smoke as completed.
+1. Implement Experiment 3 oracle_abstracted_card and hard_mismatched_abstracted_card.
+2. Add decoupled judge mode that does not see gold reason text or original failed action.
+3. Run Experiment 3 on the Experiment 2A target cases.
+4. If Experiment 3 does not collapse, implement Experiment 4 source-target pairing.
+5. Run Experiment 4 cross-trace transfer lite.
+6. Only then decide whether to run powered Experiment 3/4, rerun a revised powered 2A, or move to
+   a runnable closed-loop benchmark.
 ```
 
 ## What Not To Do Yet
 
-Do not add these until the powered Experiment 2A gate passes:
+Do not add these until Experiment 3 survives abstraction and Experiment 4 shows at least a
+promising transfer signal:
 
 ```text
 Who&When predicted all_at_once / step_by_step / binary_search cards
 Phase 2B predicted intervention point
 full cross-trace main run
+runnable closed-loop agent build
 ```
 
-Do not start the expensive closed-loop runnable agent build until Experiment 2B shows transfer over
+Do not start the expensive closed-loop runnable agent build until cross-trace transfer beats
 coarse/generic baselines.
 
 Reason:
