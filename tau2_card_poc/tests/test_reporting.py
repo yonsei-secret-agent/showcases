@@ -6,10 +6,13 @@ from pathlib import Path
 from tau2_card_poc.reporting import (
     collect_experiment_records,
     condition_summary,
+    pairwise_condition_matrix,
     paired_condition_summary,
     task_stability_summary,
     write_paired_condition_summary_csv,
     write_condition_summary_csv,
+    write_pairwise_condition_matrix_csv,
+    write_per_run_outcomes_csv,
 )
 
 
@@ -142,6 +145,82 @@ class ReportingTests(unittest.TestCase):
         self.assertIn("condition,paired_attempts,baseline_successes", text)
         self.assertIn("oracle,1,0,1,1,0,1.0000,1.0000,0.0000", text)
 
+    def test_writes_per_run_outcomes_csv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "per_run.csv"
+            records = [
+                _record(
+                    "2",
+                    "oracle",
+                    401,
+                    1.0,
+                    db_reward=1.0,
+                    communicate_reward=None,
+                    nl_assertion_reward=1.0,
+                    result_path=Path("exp/task_2/condition_oracle/seed_401/results.json"),
+                )
+            ]
+
+            write_per_run_outcomes_csv(records, out)
+            text = out.read_text()
+
+        self.assertIn(
+            "experiment_id,task_id,seed,condition,success,final_reward,"
+            "db_reward,communicate_reward,nl_assertion_reward,result_path",
+            text,
+        )
+        self.assertIn(
+            "exp,2,401,oracle,1,1.0000,1.0000,,1.0000,"
+            "exp/task_2/condition_oracle/seed_401/results.json",
+            text,
+        )
+
+    def test_pairwise_condition_matrix_compares_all_condition_pairs(self):
+        records = [
+            _record("2", "no_memory", 401, 0.0),
+            _record("2", "generic", 401, 1.0),
+            _record("2", "oracle", 401, 1.0),
+            _record("3", "no_memory", 401, 1.0),
+            _record("3", "generic", 401, 0.0),
+            _record("3", "oracle", 401, 1.0),
+            _record("4", "no_memory", 401, 0.0),
+            _record("4", "generic", 401, 0.0),
+            _record("4", "oracle", 401, 0.0),
+        ]
+
+        matrix = pairwise_condition_matrix(records)
+        generic_vs_oracle = matrix[("generic", "oracle")]
+        no_vs_generic = matrix[("generic", "no_memory")]
+
+        self.assertEqual(generic_vs_oracle.paired_attempts, 3)
+        self.assertEqual(generic_vs_oracle.condition_a_successes, 1)
+        self.assertEqual(generic_vs_oracle.condition_b_successes, 2)
+        self.assertEqual(generic_vs_oracle.a_beats_b, 0)
+        self.assertEqual(generic_vs_oracle.b_beats_a, 1)
+        self.assertEqual(generic_vs_oracle.ties_success, 1)
+        self.assertEqual(generic_vs_oracle.ties_failure, 1)
+        self.assertAlmostEqual(generic_vs_oracle.success_delta_a_minus_b, -1 / 3)
+        self.assertEqual(no_vs_generic.a_beats_b, 1)
+        self.assertEqual(no_vs_generic.b_beats_a, 1)
+
+    def test_writes_pairwise_condition_matrix_csv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "pairwise.csv"
+            matrix = pairwise_condition_matrix(
+                [
+                    _record("2", "generic", 401, 1.0),
+                    _record("2", "oracle", 401, 0.0),
+                    _record("3", "generic", 401, 0.0),
+                    _record("3", "oracle", 401, 0.0),
+                ]
+            )
+
+            write_pairwise_condition_matrix_csv(matrix, out)
+            text = out.read_text()
+
+        self.assertIn("condition_a,condition_b,paired_attempts", text)
+        self.assertIn("generic,oracle,2,1,0,1,0,0,1,0.5000", text)
+
 
 def _write_result(path, *, condition, task_id, seed, reward, db, nl):
     path.mkdir(parents=True, exist_ok=True)
@@ -164,7 +243,17 @@ def _write_result(path, *, condition, task_id, seed, reward, db, nl):
     (path / "results.json").write_text(json.dumps(payload))
 
 
-def _record(task_id, condition, seed, reward):
+def _record(
+    task_id,
+    condition,
+    seed,
+    reward,
+    *,
+    db_reward=None,
+    communicate_reward=None,
+    nl_assertion_reward=None,
+    result_path=Path("results.json"),
+):
     from tau2_card_poc.reporting import ExperimentRecord
 
     return ExperimentRecord(
@@ -175,10 +264,10 @@ def _record(task_id, condition, seed, reward):
         trial=0,
         reward=reward,
         success=reward == 1.0,
-        db_reward=None,
-        communicate_reward=None,
-        nl_assertion_reward=None,
-        result_path=Path("results.json"),
+        db_reward=db_reward,
+        communicate_reward=communicate_reward,
+        nl_assertion_reward=nl_assertion_reward,
+        result_path=result_path,
     )
 
 

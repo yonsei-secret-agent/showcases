@@ -3,15 +3,16 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from tau2_card_poc.batch_runner import run_manifest
-from tau2_card_poc.experiment_manifest import load_experiment_manifest
 from tau2_card_poc.reporting import (
     collect_experiment_records,
     condition_summary,
+    pairwise_condition_matrix,
     paired_condition_summary,
     task_stability_summary,
     write_condition_summary_csv,
+    write_pairwise_condition_matrix_csv,
     write_paired_condition_summary_csv,
+    write_per_run_outcomes_csv,
     write_task_stability_csv,
 )
 
@@ -32,6 +33,9 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     if args.command == "run-manifest":
+        from tau2_card_poc.batch_runner import run_manifest
+        from tau2_card_poc.experiment_manifest import load_experiment_manifest
+
         manifest = load_experiment_manifest(args.manifest)
         results = run_manifest(
             manifest,
@@ -54,6 +58,11 @@ def main(argv: list[str] | None = None) -> int:
         write_paired_condition_summary_csv(
             paired_condition_summary(records),
             out_dir / "paired_condition_summary.csv",
+        )
+        write_per_run_outcomes_csv(records, out_dir / "per_run_outcomes.csv")
+        write_pairwise_condition_matrix_csv(
+            pairwise_condition_matrix(records),
+            out_dir / "pairwise_condition_matrix.csv",
         )
         write_task_stability_csv(task_stability_summary(records), out_dir / "task_stability.csv")
         print(f"wrote summaries for {len(records)} records to {out_dir}")

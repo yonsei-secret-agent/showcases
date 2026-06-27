@@ -39,6 +39,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertTrue((out_dir / "condition_summary.csv").exists())
             self.assertTrue((out_dir / "paired_condition_summary.csv").exists())
+            self.assertTrue((out_dir / "per_run_outcomes.csv").exists())
+            self.assertTrue((out_dir / "pairwise_condition_matrix.csv").exists())
             self.assertTrue((out_dir / "task_stability.csv").exists())
 
 
