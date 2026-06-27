@@ -1,0 +1,47 @@
+{
+  "experiment_id": "exp5_2_baseline_harvest_30",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [
+    "2",
+    "3",
+    "4",
+    "20",
+    "27",
+    "28",
+    "34",
+    "36",
+    "41",
+    "56",
+    "71",
+    "79",
+    "103",
+    "104",
+    "109",
+    "111",
+    "112",
+    "0",
+    "16",
+    "43",
+    "95",
+    "98",
+    "99",
+    "110",
+    "1",
+    "7",
+    "14",
+    "15",
+    "19",
+    "33"
+  ],
+  "seeds": [401, 402, 403],
+  "conditions": [
+    {
+      "name": "no_memory",
+      "runtime_memory": ""
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10
+}

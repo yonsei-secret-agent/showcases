@@ -1,0 +1,29 @@
+{
+  "experiment_id": "exp5_3_rescue_20",
+  "status": "template_fill_after_exp5_2",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [],
+  "seeds": [501, 502, 503],
+  "conditions": [
+    {
+      "name": "no_memory",
+      "runtime_memory": ""
+    },
+    {
+      "name": "generic_policy_card",
+      "runtime_memory": "Failure Card: General retail task reliability check.\nFailure pattern: Customer-service tasks often fail when the agent skips policy checks, relies on unsupported assumptions, or finalizes before confirming required user-facing information.\nApplicable situation: Before tool calls that read or mutate records, and before the final response.\nRisky action pattern: Acting from memory, skipping record or policy verification, or completing only part of the user's request.\nDo: Verify policy eligibility, tool evidence, required database updates, and required communication before finalizing.\nDo not: Do not mutate records or answer the user from an unsupported assumption.\nCheck before tool or final response: Have I verified policy, evidence, required record changes, and required communication?"
+    },
+    {
+      "name": "oracle_single_missing_check_card",
+      "runtime_memory": "FILL_PER_TASK_AFTER_BASELINE_ANNOTATION. This card must contain exactly one attributed missing-check pattern and must not bundle unrelated generic repair advice."
+    },
+    {
+      "name": "hard_mismatched_card",
+      "runtime_memory": "FILL_PER_TASK_AFTER_BASELINE_ANNOTATION. This card must be orthogonal to the target failure and must not include broadly helpful verification advice that could accidentally repair the target."
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10
+}
