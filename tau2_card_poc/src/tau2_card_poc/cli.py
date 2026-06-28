@@ -6,10 +6,12 @@ from pathlib import Path
 from tau2_card_poc.reporting import (
     collect_experiment_records,
     condition_summary,
+    gate_condition_summary,
     pairwise_condition_matrix,
     paired_condition_summary,
     task_stability_summary,
     write_condition_summary_csv,
+    write_gate_condition_summary_csv,
     write_pairwise_condition_matrix_csv,
     write_paired_condition_summary_csv,
     write_per_run_outcomes_csv,
@@ -85,6 +87,10 @@ def main(argv: list[str] | None = None) -> int:
             out_dir / "pairwise_condition_matrix.csv",
         )
         write_task_stability_csv(task_stability_summary(records), out_dir / "task_stability.csv")
+        write_gate_condition_summary_csv(
+            gate_condition_summary(records),
+            out_dir / "gate_condition_summary.csv",
+        )
         print(f"wrote summaries for {len(records)} records to {out_dir}")
         return 0
 

@@ -20,6 +20,10 @@ class ExperimentRecord:
     communicate_reward: float | None
     nl_assertion_reward: float | None
     result_path: Path
+    gate_trigger_count: int = 0
+    gate_failure_count: int = 0
+    gate_retry_count: int = 0
+    gate_final_passed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -67,6 +71,18 @@ class PairwiseConditionComparison:
     success_delta_a_minus_b: float
 
 
+@dataclass(frozen=True)
+class GateConditionSummary:
+    condition: str
+    attempts: int
+    runs_with_gate_trigger: int
+    gate_trigger_rate: float
+    total_gate_triggers: int
+    total_gate_failures: int
+    total_gate_retries: int
+    final_gate_passes: int
+
+
 def collect_experiment_records(
     experiment_dir: str | Path,
     *,
@@ -86,6 +102,7 @@ def collect_experiment_records(
             reward_info = simulation.get("reward_info") or {}
             reward = _as_float(reward_info.get("reward"))
             breakdown = reward_info.get("reward_breakdown") or {}
+            gate_metrics = _gate_metrics(simulation.get("info") or {})
             records.append(
                 ExperimentRecord(
                     experiment_id=experiment_path.name,
@@ -99,6 +116,10 @@ def collect_experiment_records(
                     communicate_reward=_breakdown_value(breakdown, "COMMUNICATE"),
                     nl_assertion_reward=_breakdown_value(breakdown, "NL_ASSERTION"),
                     result_path=result_path,
+                    gate_trigger_count=gate_metrics["trigger_count"],
+                    gate_failure_count=gate_metrics["failure_count"],
+                    gate_retry_count=gate_metrics["retry_count"],
+                    gate_final_passed=gate_metrics["final_passed"],
                 )
             )
     return records
@@ -257,6 +278,42 @@ def pairwise_condition_matrix(
     return matrix
 
 
+def gate_condition_summary(
+    records: list[ExperimentRecord],
+) -> dict[str, GateConditionSummary]:
+    grouped: dict[str, list[ExperimentRecord]] = {}
+    for record in records:
+        grouped.setdefault(record.condition, []).append(record)
+
+    summaries = {}
+    for condition, condition_records in sorted(grouped.items()):
+        attempts = len(condition_records)
+        runs_with_gate_trigger = sum(
+            1 for record in condition_records if record.gate_trigger_count > 0
+        )
+        summaries[condition] = GateConditionSummary(
+            condition=condition,
+            attempts=attempts,
+            runs_with_gate_trigger=runs_with_gate_trigger,
+            gate_trigger_rate=(
+                runs_with_gate_trigger / attempts if attempts else 0.0
+            ),
+            total_gate_triggers=sum(
+                record.gate_trigger_count for record in condition_records
+            ),
+            total_gate_failures=sum(
+                record.gate_failure_count for record in condition_records
+            ),
+            total_gate_retries=sum(
+                record.gate_retry_count for record in condition_records
+            ),
+            final_gate_passes=sum(
+                1 for record in condition_records if record.gate_final_passed is True
+            ),
+        )
+    return summaries
+
+
 def write_condition_summary_csv(
     summaries: dict[str, ConditionSummary],
     output_path: str | Path,
@@ -338,6 +395,10 @@ def write_per_run_outcomes_csv(
                 "db_reward",
                 "communicate_reward",
                 "nl_assertion_reward",
+                "gate_trigger_count",
+                "gate_failure_count",
+                "gate_retry_count",
+                "gate_final_passed",
                 "result_path",
             ]
         )
@@ -353,7 +414,48 @@ def write_per_run_outcomes_csv(
                     _format_optional_float(record.db_reward),
                     _format_optional_float(record.communicate_reward),
                     _format_optional_float(record.nl_assertion_reward),
+                    record.gate_trigger_count,
+                    record.gate_failure_count,
+                    record.gate_retry_count,
+                    _format_optional_bool(record.gate_final_passed),
                     str(record.result_path),
+                ]
+            )
+    return path
+
+
+def write_gate_condition_summary_csv(
+    summaries: dict[str, GateConditionSummary],
+    output_path: str | Path,
+) -> Path:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "condition",
+                "attempts",
+                "runs_with_gate_trigger",
+                "gate_trigger_rate",
+                "total_gate_triggers",
+                "total_gate_failures",
+                "total_gate_retries",
+                "final_gate_passes",
+            ]
+        )
+        for condition in sorted(summaries):
+            summary = summaries[condition]
+            writer.writerow(
+                [
+                    summary.condition,
+                    summary.attempts,
+                    summary.runs_with_gate_trigger,
+                    f"{summary.gate_trigger_rate:.4f}",
+                    summary.total_gate_triggers,
+                    summary.total_gate_failures,
+                    summary.total_gate_retries,
+                    summary.final_gate_passes,
                 ]
             )
     return path
@@ -437,6 +539,21 @@ def _breakdown_value(reward_breakdown: dict, key: str) -> float | None:
     return _as_float(value)
 
 
+def _gate_metrics(info: dict) -> dict:
+    events = info.get("binding_gate_events") or []
+    triggered_events = [event for event in events if event.get("triggered")]
+    return {
+        "trigger_count": len(triggered_events),
+        "failure_count": sum(
+            1 for event in triggered_events if event.get("passed") is False
+        ),
+        "retry_count": sum(1 for event in triggered_events if event.get("retry_used")),
+        "final_passed": (
+            bool(triggered_events[-1].get("passed")) if triggered_events else None
+        ),
+    }
+
+
 def _as_float(value) -> float | None:
     if value is None:
         return None
@@ -453,3 +570,9 @@ def _format_optional_float(value: float | None) -> str:
     if value is None:
         return ""
     return f"{value:.4f}"
+
+
+def _format_optional_bool(value: bool | None) -> str:
+    if value is None:
+        return ""
+    return "1" if value else "0"

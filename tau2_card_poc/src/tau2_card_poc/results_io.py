@@ -24,6 +24,10 @@ class Tau2ResultRecord:
     user_model: str | None
     tool_call_names: list[str]
     message_count: int
+    gate_trigger_count: int = 0
+    gate_failure_count: int = 0
+    gate_retry_count: int = 0
+    gate_final_passed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -47,6 +51,7 @@ def load_result_records(results_path: str | Path) -> list[Tau2ResultRecord]:
         reward = _as_float(reward_info.get("reward"))
         reward_breakdown = reward_info.get("reward_breakdown") or {}
         messages = sim.get("messages") or []
+        gate_metrics = _gate_metrics(sim.get("info") or {})
 
         records.append(
             Tau2ResultRecord(
@@ -68,6 +73,10 @@ def load_result_records(results_path: str | Path) -> list[Tau2ResultRecord]:
                 user_model=user_info.get("llm"),
                 tool_call_names=_tool_call_names(messages),
                 message_count=len(messages),
+                gate_trigger_count=gate_metrics["trigger_count"],
+                gate_failure_count=gate_metrics["failure_count"],
+                gate_retry_count=gate_metrics["retry_count"],
+                gate_final_passed=gate_metrics["final_passed"],
             )
         )
     return records
@@ -127,6 +136,21 @@ def _tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
             if name:
                 names.append(str(name))
     return names
+
+
+def _gate_metrics(info: dict[str, Any]) -> dict[str, Any]:
+    events = info.get("binding_gate_events") or []
+    triggered_events = [event for event in events if event.get("triggered")]
+    return {
+        "trigger_count": len(triggered_events),
+        "failure_count": sum(
+            1 for event in triggered_events if event.get("passed") is False
+        ),
+        "retry_count": sum(1 for event in triggered_events if event.get("retry_used")),
+        "final_passed": (
+            bool(triggered_events[-1].get("passed")) if triggered_events else None
+        ),
+    }
 
 
 def _as_float(value: Any) -> float | None:

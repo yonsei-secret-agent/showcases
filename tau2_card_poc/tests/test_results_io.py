@@ -90,6 +90,51 @@ class ResultIoTests(unittest.TestCase):
         self.assertEqual(records[0].tool_call_names, ["get_order"])
         self.assertEqual(records[0].agent_model, "gpt-4.1-mini")
         self.assertEqual(records[0].user_model, "gpt-4.1-mini")
+        self.assertEqual(records[0].gate_trigger_count, 0)
+
+    def test_loads_binding_gate_metrics_from_simulation_info(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            results_path = Path(tmp) / "results.json"
+            results_path.write_text(
+                json.dumps(
+                    {
+                        "info": {},
+                        "simulations": [
+                            {
+                                "id": "sim-gated",
+                                "task_id": "43",
+                                "trial": 0,
+                                "seed": 701,
+                                "info": {
+                                    "binding_gate_events": [
+                                        {
+                                            "triggered": True,
+                                            "passed": False,
+                                            "retry_used": True,
+                                            "failed_rules": ["money amount"],
+                                        },
+                                        {
+                                            "triggered": True,
+                                            "passed": True,
+                                            "retry_used": False,
+                                            "failed_rules": [],
+                                        },
+                                    ]
+                                },
+                                "reward_info": {"reward": 1.0},
+                                "messages": [],
+                            }
+                        ],
+                    }
+                )
+            )
+
+            records = load_result_records(results_path)
+
+        self.assertEqual(records[0].gate_trigger_count, 2)
+        self.assertEqual(records[0].gate_failure_count, 1)
+        self.assertEqual(records[0].gate_retry_count, 1)
+        self.assertTrue(records[0].gate_final_passed)
 
     def test_groups_repeated_task_attempts_by_stability(self):
         records = [
@@ -131,6 +176,10 @@ def _record(simulation_id, task_id, success):
         user_model=None,
         tool_call_names=[],
         message_count=0,
+        gate_trigger_count=0,
+        gate_failure_count=0,
+        gate_retry_count=0,
+        gate_final_passed=None,
     )
 
 

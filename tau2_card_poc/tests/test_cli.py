@@ -43,6 +43,7 @@ class CliTests(unittest.TestCase):
             self.assertTrue((out_dir / "per_run_outcomes.csv").exists())
             self.assertTrue((out_dir / "pairwise_condition_matrix.csv").exists())
             self.assertTrue((out_dir / "task_stability.csv").exists())
+            self.assertTrue((out_dir / "gate_condition_summary.csv").exists())
 
     def test_run_binding_manifest_command_invokes_binding_runner(self):
         with tempfile.TemporaryDirectory() as tmp:

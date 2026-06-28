@@ -8,7 +8,9 @@ from tau2_card_poc.reporting import (
     condition_summary,
     pairwise_condition_matrix,
     paired_condition_summary,
+    gate_condition_summary,
     task_stability_summary,
+    write_gate_condition_summary_csv,
     write_paired_condition_summary_csv,
     write_condition_summary_csv,
     write_pairwise_condition_matrix_csv,
@@ -166,14 +168,57 @@ class ReportingTests(unittest.TestCase):
 
         self.assertIn(
             "experiment_id,task_id,seed,condition,success,final_reward,"
-            "db_reward,communicate_reward,nl_assertion_reward,result_path",
+            "db_reward,communicate_reward,nl_assertion_reward,"
+            "gate_trigger_count,gate_failure_count,gate_retry_count,"
+            "gate_final_passed,result_path",
             text,
         )
         self.assertIn(
-            "exp,2,401,oracle,1,1.0000,1.0000,,1.0000,"
+            "exp,2,401,oracle,1,1.0000,1.0000,,1.0000,0,0,0,,"
             "exp/task_2/condition_oracle/seed_401/results.json",
             text,
         )
+
+    def test_summarizes_and_writes_gate_condition_metrics(self):
+        records = [
+            _record(
+                "43",
+                "oracle_gate",
+                701,
+                1.0,
+                gate_trigger_count=2,
+                gate_failure_count=1,
+                gate_retry_count=1,
+                gate_final_passed=True,
+            ),
+            _record(
+                "43",
+                "oracle_gate",
+                702,
+                0.0,
+                gate_trigger_count=1,
+                gate_failure_count=1,
+                gate_retry_count=0,
+                gate_final_passed=False,
+            ),
+        ]
+
+        summary = gate_condition_summary(records)["oracle_gate"]
+
+        self.assertEqual(summary.attempts, 2)
+        self.assertEqual(summary.runs_with_gate_trigger, 2)
+        self.assertEqual(summary.total_gate_triggers, 3)
+        self.assertEqual(summary.total_gate_failures, 2)
+        self.assertEqual(summary.total_gate_retries, 1)
+        self.assertEqual(summary.final_gate_passes, 1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "gate_summary.csv"
+            write_gate_condition_summary_csv({"oracle_gate": summary}, out)
+            text = out.read_text()
+
+        self.assertIn("condition,attempts,runs_with_gate_trigger", text)
+        self.assertIn("oracle_gate,2,2,1.0000,3,2,1,1", text)
 
     def test_pairwise_condition_matrix_compares_all_condition_pairs(self):
         records = [
@@ -253,6 +298,10 @@ def _record(
     communicate_reward=None,
     nl_assertion_reward=None,
     result_path=Path("results.json"),
+    gate_trigger_count=0,
+    gate_failure_count=0,
+    gate_retry_count=0,
+    gate_final_passed=None,
 ):
     from tau2_card_poc.reporting import ExperimentRecord
 
@@ -268,6 +317,10 @@ def _record(
         communicate_reward=communicate_reward,
         nl_assertion_reward=nl_assertion_reward,
         result_path=result_path,
+        gate_trigger_count=gate_trigger_count,
+        gate_failure_count=gate_failure_count,
+        gate_retry_count=gate_retry_count,
+        gate_final_passed=gate_final_passed,
     )
 
 
