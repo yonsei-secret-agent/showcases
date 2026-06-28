@@ -1,5 +1,12 @@
 # Experiments Overview
 
+For the consolidated report-facing summary of the full arc from Who&When to
+tau2 binding checks, see:
+
+```text
+docs/failure_attribution_experiment_arc_summary.md
+```
+
 ## North Star
 
 이 프로젝트의 핵심 질문은 다음이다.
