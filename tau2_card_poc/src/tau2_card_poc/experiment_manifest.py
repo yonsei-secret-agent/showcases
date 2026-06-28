@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
-from tau2_card_poc.memory_runner import MemoryRetrySpec
+from tau2_card_poc.specs import MemoryRetrySpec
 
 
 @dataclass(frozen=True)

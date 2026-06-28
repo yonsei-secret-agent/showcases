@@ -9,7 +9,7 @@ from tau2_card_poc.experiment_manifest import (
     ExperimentManifest,
     iter_memory_retry_specs,
 )
-from tau2_card_poc.memory_runner import MemoryRetrySpec, run_single_memory_retry
+from tau2_card_poc.specs import MemoryRetrySpec
 
 
 SingleRun = Callable[[MemoryRetrySpec, Path], Path]
@@ -48,7 +48,12 @@ def run_manifest(
     single_run: SingleRun | None = None,
     resume: bool = True,
 ) -> list[ManifestRunResult]:
-    runner = single_run or run_single_memory_retry
+    if single_run is None:
+        from tau2_card_poc.memory_runner import run_single_memory_retry
+
+        runner = run_single_memory_retry
+    else:
+        runner = single_run
     results: list[ManifestRunResult] = []
 
     for spec in iter_memory_retry_specs(manifest):

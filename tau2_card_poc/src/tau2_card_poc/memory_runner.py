@@ -4,27 +4,12 @@ import hashlib
 import json
 import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
 from tau2.agent.llm_agent import LLMAgent
 
-
-@dataclass(frozen=True)
-class MemoryRetrySpec:
-    domain: str
-    task_id: str
-    condition: str
-    runtime_memory: str
-    seed: int
-    trial: int
-    agent_model: str
-    user_model: str
-    task_split_name: str | None = None
-    max_steps: int = 100
-    max_errors: int = 10
-    log_level: str = "INFO"
+from tau2_card_poc.specs import MemoryRetrySpec
 
 
 def format_runtime_memory(memory: str, *, condition: str | None = None) -> str:
