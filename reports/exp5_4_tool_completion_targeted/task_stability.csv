@@ -1,0 +1,8 @@
+task_id,attempts,successes,failures,group
+16,25,6,19,mixed
+19,25,7,18,mixed
+36,25,5,20,mixed
+41,25,6,19,mixed
+95,25,10,15,mixed
+103,25,2,23,mixed
+104,25,4,21,mixed

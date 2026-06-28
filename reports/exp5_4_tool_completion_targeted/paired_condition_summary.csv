@@ -1,0 +1,5 @@
+condition,paired_attempts,baseline_successes,condition_successes,paired_rescues,paired_regressions,success_delta,rescue_rate_among_baseline_failures,regression_rate_among_baseline_successes
+generic_policy_card_v2,35,7,8,7,6,0.0286,0.2500,0.8571
+hard_mismatched_card_v2,35,7,5,3,5,-0.0571,0.1071,0.7143
+oracle_single_missing_check_card_v1,35,7,14,13,6,0.2000,0.4643,0.8571
+oracle_tool_completion_card_v2,35,7,6,5,6,-0.0286,0.1786,0.8571
