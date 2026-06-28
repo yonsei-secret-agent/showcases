@@ -5,7 +5,7 @@
   "agent_model": "gpt-4.1-mini",
   "user_model": "gpt-4.1-mini",
   "task_ids": [16, 95, 36, 103, 19, 41, 104],
-  "seeds": [501, 502, 503],
+  "seeds": [501, 502, 503, 504, 505],
   "conditions": [
     {
       "name": "no_memory",

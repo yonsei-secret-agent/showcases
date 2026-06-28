@@ -593,6 +593,18 @@ promising, run a second pass with two additional seeds only for non-dead tasks:
 504, 505
 ```
 
+After the same-seed determinism probe, the default run should use five seeds up
+front rather than treating `501-503` as a hard paired gate:
+
+```text
+501, 502, 503, 504, 505
+```
+
+The original `501-503` seeds remain useful for continuity checks against
+Exp5.3. The primary interpretation should use all five seeds as repeated
+condition-rate observations and task-level patterns, because the probe showed
+that identical no-memory cells can still flip.
+
 ### Primary Metrics
 
 Report:

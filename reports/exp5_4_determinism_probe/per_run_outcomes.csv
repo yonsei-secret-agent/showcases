@@ -1,0 +1,7 @@
+experiment_id,task_id,seed,condition,success,final_reward,db_reward,communicate_reward,nl_assertion_reward,result_path
+exp5_4_determinism_probe,16,501,no_memory_probe_a,0,0.0000,1.0000,,0.0000,third_party/tau2-bench/data/simulations/exp5_4_determinism_probe/task_16/condition_no_memory_probe_a/seed_501/results.json
+exp5_4_determinism_probe,16,501,no_memory_probe_b,0,0.0000,0.0000,,0.0000,third_party/tau2-bench/data/simulations/exp5_4_determinism_probe/task_16/condition_no_memory_probe_b/seed_501/results.json
+exp5_4_determinism_probe,36,501,no_memory_probe_a,0,0.0000,0.0000,,1.0000,third_party/tau2-bench/data/simulations/exp5_4_determinism_probe/task_36/condition_no_memory_probe_a/seed_501/results.json
+exp5_4_determinism_probe,36,501,no_memory_probe_b,1,1.0000,1.0000,,1.0000,third_party/tau2-bench/data/simulations/exp5_4_determinism_probe/task_36/condition_no_memory_probe_b/seed_501/results.json
+exp5_4_determinism_probe,103,501,no_memory_probe_a,0,0.0000,0.0000,,0.0000,third_party/tau2-bench/data/simulations/exp5_4_determinism_probe/task_103/condition_no_memory_probe_a/seed_501/results.json
+exp5_4_determinism_probe,103,501,no_memory_probe_b,0,0.0000,0.0000,,0.0000,third_party/tau2-bench/data/simulations/exp5_4_determinism_probe/task_103/condition_no_memory_probe_b/seed_501/results.json
