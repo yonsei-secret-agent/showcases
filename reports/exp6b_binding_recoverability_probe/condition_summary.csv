@@ -1,0 +1,3 @@
+condition,attempts,successes,success_rate,mean_reward
+coarse_binding_gate,10,4,0.4000,0.4000
+no_gate,10,1,0.1000,0.1000

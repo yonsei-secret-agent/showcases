@@ -195,6 +195,8 @@ def binding_gate_from_dict(
             PresenceRule(
                 kind=str(rule["kind"]),
                 description=str(rule["description"]),
+                min_count=int(rule.get("min_count", 1)),
+                keywords=tuple(str(keyword) for keyword in rule.get("keywords", [])),
             )
             for rule in data.get("rules", [])
         ],

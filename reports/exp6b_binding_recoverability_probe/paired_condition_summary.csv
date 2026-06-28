@@ -1,0 +1,2 @@
+condition,paired_attempts,baseline_successes,condition_successes,paired_rescues,paired_regressions,success_delta,rescue_rate_among_baseline_failures,regression_rate_among_baseline_successes
+coarse_binding_gate,10,1,4,4,1,0.3000,0.4444,1.0000

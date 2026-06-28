@@ -32,6 +32,36 @@ class BindingGateTests(unittest.TestCase):
         self.assertFalse(decision.passed)
         self.assertEqual(decision.failed_rules, ["tracking number"])
 
+    def test_tracking_rule_requires_tracking_like_token_not_just_phrase(self):
+        gate = BindingGate(
+            name="tracking_check",
+            feedback="Missing tracking number.",
+            rules=[PresenceRule(kind="tracking", description="tracking number")],
+        )
+
+        decision = evaluate_binding_gate(
+            gate,
+            "I do not see a tracking number for that canceled order.",
+        )
+
+        self.assertFalse(decision.passed)
+        self.assertEqual(decision.failed_rules, ["tracking number"])
+
+    def test_tracking_rule_does_not_accept_order_id(self):
+        gate = BindingGate(
+            name="tracking_check",
+            feedback="Missing tracking number.",
+            rules=[PresenceRule(kind="tracking", description="tracking number")],
+        )
+
+        decision = evaluate_binding_gate(
+            gate,
+            "The order #W4860251 has been updated successfully.",
+        )
+
+        self.assertFalse(decision.passed)
+        self.assertEqual(decision.failed_rules, ["tracking number"])
+
     def test_multiple_rules_must_all_pass(self):
         gate = BindingGate(
             name="compound_summary",
@@ -68,6 +98,45 @@ class BindingGateTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             evaluate_binding_gate(gate, "Anything.")
+
+    def test_money_rule_can_require_multiple_amounts(self):
+        gate = BindingGate(
+            name="price_breakdown",
+            feedback="Missing price breakdown.",
+            rules=[
+                PresenceRule(
+                    kind="money",
+                    description="three money amounts",
+                    min_count=3,
+                )
+            ],
+        )
+
+        decision = evaluate_binding_gate(gate, "The total amount due today is $107.09.")
+
+        self.assertFalse(decision.passed)
+        self.assertEqual(decision.failed_rules, ["three money amounts"])
+
+    def test_keyword_rule_requires_one_allowed_phrase(self):
+        gate = BindingGate(
+            name="explicit_superlative",
+            feedback="Missing explicit comparison.",
+            rules=[
+                PresenceRule(
+                    kind="keyword",
+                    description="most expensive item",
+                    keywords=("most expensive", "highest-priced"),
+                )
+            ],
+        )
+
+        decision = evaluate_binding_gate(
+            gate,
+            "The camera costs $481.50, and the other items are cheaper.",
+        )
+
+        self.assertFalse(decision.passed)
+        self.assertEqual(decision.failed_rules, ["most expensive item"])
 
 
 if __name__ == "__main__":

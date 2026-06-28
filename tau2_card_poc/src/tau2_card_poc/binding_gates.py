@@ -8,6 +8,8 @@ from dataclasses import dataclass
 class PresenceRule:
     kind: str
     description: str
+    min_count: int = 1
+    keywords: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -36,14 +38,13 @@ def _presence_rule_passes(rule: PresenceRule, text: str) -> bool:
     if rule.kind == "any_text":
         return bool(text.strip())
     if rule.kind == "money":
-        return bool(re.search(r"(?:\$|usd\s*)?\b\d+(?:,\d{3})*(?:\.\d{2})\b", normalized))
+        matches = re.findall(r"(?:\$|usd\s*)?\b\d+(?:,\d{3})*(?:\.\d{2})\b", normalized)
+        return len(matches) >= rule.min_count
     if rule.kind == "count":
-        return bool(re.search(r"\b\d+\b", normalized))
+        return len(re.findall(r"\b\d+\b", normalized)) >= rule.min_count
     if rule.kind == "tracking":
-        tracking_words = ("tracking number", "tracking #", "tracking:")
-        has_tracking_word = any(word in normalized for word in tracking_words)
-        has_tracking_like_token = bool(re.search(r"\b[A-Z0-9]{8,}\b", text))
-        return has_tracking_word or has_tracking_like_token
+        has_tracking_like_token = bool(re.search(r"\b\d{9,}\b", text))
+        return has_tracking_like_token
     if rule.kind == "status":
         status_words = (
             "pending",
@@ -71,4 +72,6 @@ def _presence_rule_passes(rule: PresenceRule, text: str) -> bool:
             "option",
         )
         return any(word in normalized for word in comparison_words)
+    if rule.kind == "keyword":
+        return any(keyword.lower() in normalized for keyword in rule.keywords)
     raise ValueError(f"unsupported presence rule kind: {rule.kind}")

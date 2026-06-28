@@ -1,0 +1,43 @@
+{
+  "experiment_id": "exp6b_binding_pool_harvest_no_gate",
+  "status": "ready",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [
+    16,
+    19,
+    21,
+    24,
+    28,
+    29,
+    30,
+    36,
+    37,
+    38,
+    40,
+    43,
+    44,
+    46,
+    47,
+    54,
+    59,
+    63,
+    67,
+    68,
+    89,
+    95,
+    103,
+    104
+  ],
+  "seeds": [801, 802],
+  "conditions": [
+    {
+      "name": "no_gate",
+      "binding_gate": null
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10,
+  "log_level": "INFO"
+}

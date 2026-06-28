@@ -2,10 +2,17 @@
 
 ## Status
 
-Planned. This is the last proposed experiment before writing the report.
+Exp6A and Exp6B completed; see `docs/experiment6_results.md`.
 
-Do not implement until the plan is reviewed. Do not tune another prose card
-before this experiment.
+The current result is:
+
+```text
+binding checks are live and can rescue selected fresh tau2 failures,
+but precision under binding is not yet tested.
+```
+
+The remaining pre-report decision point is whether to run a small Exp6C
+precision-under-binding comparison on the recoverable subset.
 
 ## Role In The Report
 

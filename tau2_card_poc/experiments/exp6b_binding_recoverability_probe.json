@@ -1,0 +1,91 @@
+{
+  "experiment_id": "exp6b_binding_recoverability_probe",
+  "status": "ready",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [19, 36, 95, 103, 104],
+  "seeds": [801, 802],
+  "conditions": [
+    {
+      "name": "no_gate",
+      "binding_gate": null
+    },
+    {
+      "name": "coarse_binding_gate",
+      "binding_gate": null,
+      "per_task_binding_gate": {
+        "19": {
+          "name": "refund_and_exchange_savings_summary_gate",
+          "feedback": "Before ending, include both the refund amount and the combined total savings for the exchange option. Do not provide only separate item amounts.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "at least two money amounts",
+              "min_count": 2
+            },
+            {
+              "kind": "keyword",
+              "description": "combined total savings wording",
+              "keywords": ["total savings", "total save", "saves"]
+            }
+          ]
+        },
+        "36": {
+          "name": "most_expensive_item_summary_gate",
+          "feedback": "Before ending, explicitly identify the most expensive item and its price, then complete the permitted order change if the user confirms.",
+          "rules": [
+            {
+              "kind": "keyword",
+              "description": "explicit most-expensive wording",
+              "keywords": ["most expensive", "highest-priced", "highest priced"]
+            },
+            {
+              "kind": "money",
+              "description": "item price"
+            }
+          ]
+        },
+        "95": {
+          "name": "two_exchange_price_breakdown_gate",
+          "feedback": "Before ending, include each laptop exchange price difference and the total amount due or refunded today.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "three money amounts",
+              "min_count": 3
+            },
+            {
+              "kind": "keyword",
+              "description": "total amount wording",
+              "keywords": ["total", "today"]
+            }
+          ]
+        },
+        "103": {
+          "name": "cancelled_order_tracking_gate",
+          "feedback": "Before ending, provide the requested tracking number for the cancelled order if it is available from the order records.",
+          "rules": [
+            {
+              "kind": "tracking",
+              "description": "numeric tracking number"
+            }
+          ]
+        },
+        "104": {
+          "name": "cancelled_order_tracking_gate",
+          "feedback": "Before ending, provide the requested tracking number for the cancelled order if it is available from the order records.",
+          "rules": [
+            {
+              "kind": "tracking",
+              "description": "numeric tracking number"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10,
+  "log_level": "INFO"
+}
