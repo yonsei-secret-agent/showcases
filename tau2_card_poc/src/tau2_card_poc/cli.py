@@ -26,6 +26,11 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("--output-root", required=True)
     run_parser.add_argument("--no-resume", action="store_true")
 
+    run_binding_parser = subparsers.add_parser("run-binding-manifest")
+    run_binding_parser.add_argument("manifest")
+    run_binding_parser.add_argument("--output-root", required=True)
+    run_binding_parser.add_argument("--no-resume", action="store_true")
+
     summarize_parser = subparsers.add_parser("summarize")
     summarize_parser.add_argument("experiment_dir")
     summarize_parser.add_argument("--out-dir", required=True)
@@ -38,6 +43,21 @@ def main(argv: list[str] | None = None) -> int:
 
         manifest = load_experiment_manifest(args.manifest)
         results = run_manifest(
+            manifest,
+            output_root=args.output_root,
+            resume=not args.no_resume,
+        )
+        ran = sum(1 for result in results if result.status == "ran")
+        skipped = sum(1 for result in results if result.status == "skipped")
+        print(f"runs: {len(results)} total, {ran} ran, {skipped} skipped")
+        return 0
+
+    if args.command == "run-binding-manifest":
+        from tau2_card_poc.binding_batch_runner import run_binding_manifest
+        from tau2_card_poc.binding_manifest import load_binding_experiment_manifest
+
+        manifest = load_binding_experiment_manifest(args.manifest)
+        results = run_binding_manifest(
             manifest,
             output_root=args.output_root,
             resume=not args.no_resume,
