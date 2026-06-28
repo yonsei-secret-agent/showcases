@@ -1,0 +1,7 @@
+condition_a,condition_b,paired_attempts,condition_a_successes,condition_b_successes,a_beats_b,b_beats_a,ties_success,ties_failure,success_delta_a_minus_b
+failure_mode_only_card,generic_policy_card,18,5,6,2,3,3,10,-0.0556
+failure_mode_only_card,no_memory,18,5,5,1,1,4,12,0.0000
+failure_mode_only_card,oracle_single_missing_check_card_v1,18,5,6,0,1,5,12,-0.0556
+generic_policy_card,no_memory,18,6,5,2,1,4,11,0.0556
+generic_policy_card,oracle_single_missing_check_card_v1,18,6,6,2,2,4,10,0.0000
+no_memory,oracle_single_missing_check_card_v1,18,5,6,0,1,5,12,-0.0556

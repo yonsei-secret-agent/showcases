@@ -2,7 +2,15 @@
 
 ## Status
 
-Planned. Do not run until this plan has been reviewed.
+Phase 5.5A variability calibration and Phase 5.5C saturation pre-check have
+been run. The pre-check did not show a usable specificity gradient, so the full
+6-condition Exp5.5F main run should not be run on the current task pool.
+
+See:
+
+```text
+docs/experiment5_5_results.md
+```
 
 ## Role In The Report
 

@@ -1,0 +1,6 @@
+task_id,attempts,successes,failures,group
+2,3,0,3,stable_failure
+16,3,0,3,stable_failure
+19,3,2,1,mixed
+54,3,3,0,stable_success
+103,3,0,3,stable_failure

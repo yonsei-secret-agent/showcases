@@ -1,0 +1,4 @@
+condition,attempts,successes,success_rate,mean_reward
+no_memory_repeat_a,5,2,0.4000,0.4000
+no_memory_repeat_b,5,2,0.4000,0.4000
+no_memory_repeat_c,5,1,0.2000,0.2000

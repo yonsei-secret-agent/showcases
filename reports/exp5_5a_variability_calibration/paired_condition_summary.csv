@@ -1,0 +1,4 @@
+condition,paired_attempts,baseline_successes,condition_successes,paired_rescues,paired_regressions,success_delta,rescue_rate_among_baseline_failures,regression_rate_among_baseline_successes
+no_memory_repeat_a,0,0,0,0,0,0.0000,0.0000,0.0000
+no_memory_repeat_b,0,0,0,0,0,0.0000,0.0000,0.0000
+no_memory_repeat_c,0,0,0,0,0,0.0000,0.0000,0.0000

@@ -1,0 +1,37 @@
+{
+  "experiment_id": "exp5_5c_saturation_precheck",
+  "status": "ready",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [2, 3, 19, 43, 47, 103],
+  "seeds": [601, 602, 603],
+  "conditions": [
+    {
+      "name": "no_memory",
+      "runtime_memory": ""
+    },
+    {
+      "name": "generic_policy_card",
+      "runtime_memory": "Memory:\nRetail tasks can fail when the final response omits a required result.\n\nAction:\nBefore final response, verify that every requested result has been communicated.\n\nDo not:\nDo not stop after completing tools if the user also requested an amount, count, status, tracking number, address, item detail, or explanation."
+    },
+    {
+      "name": "failure_mode_only_card",
+      "runtime_memory": "Memory:\nThis is a missing-required-communication risk.\n\nAction:\nCheck whether the final response should include a required amount, count, tracking number, address, item detail, status, or comparison.\n\nDo not:\nDo not finalize without the required user-facing result."
+    },
+    {
+      "name": "oracle_single_missing_check_card_v1",
+      "per_task_runtime_memory": {
+        "2": "Memory:\nThis task can fail if the catalog count is not communicated after the return work.\n\nAction:\nBefore final response, state the number of currently available product options requested by the user.\n\nDo not:\nDo not only confirm the return when the user also asked for the available-option count.",
+        "3": "Memory:\nThis task can fail if the catalog count is not communicated after the pending-order modification.\n\nAction:\nBefore final response, state the number of currently available product options requested by the user.\n\nDo not:\nDo not only confirm the order modification when the user also asked for the available-option count.",
+        "19": "Memory:\nThis task can fail if the separate savings amounts for the requested options are not communicated.\n\nAction:\nBefore final response, state the savings for the feasible return option and the alternative exchange option separately.\n\nDo not:\nDo not summarize only the action performed when the user asked to compare both savings options.",
+        "43": "Memory:\nThis task can fail if shipment and item-detail facts are looked up but not communicated together.\n\nAction:\nBefore final response, state the tracking number, destination address, transit status if applicable, and the requested tablet storage detail.\n\nDo not:\nDo not only update the address or mention delivery status while omitting the requested shipment/item details.",
+        "47": "Memory:\nThis task can fail if completed returns are not converted into both requested money summaries.\n\nAction:\nBefore final response, communicate the total refund for the returned items and the total paid for the remaining items.\n\nDo not:\nDo not only confirm the return when the user asked for refund and remaining-order totals.",
+        "103": "Memory:\nThis task can fail if the cancelled-order tracking number is found or implied but not communicated after other branches.\n\nAction:\nBefore final response, provide the requested tracking number along with the completed service actions.\n\nDo not:\nDo not let returns or pending-order changes substitute for the requested tracking-number communication."
+      }
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10,
+  "log_level": "INFO"
+}

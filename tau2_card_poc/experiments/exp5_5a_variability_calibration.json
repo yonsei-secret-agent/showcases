@@ -1,0 +1,26 @@
+{
+  "experiment_id": "exp5_5a_variability_calibration",
+  "status": "ready",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [16, 2, 19, 103, 54],
+  "seeds": [501],
+  "conditions": [
+    {
+      "name": "no_memory_repeat_a",
+      "runtime_memory": ""
+    },
+    {
+      "name": "no_memory_repeat_b",
+      "runtime_memory": ""
+    },
+    {
+      "name": "no_memory_repeat_c",
+      "runtime_memory": ""
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10,
+  "log_level": "INFO"
+}
