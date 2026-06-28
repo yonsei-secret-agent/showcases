@@ -1,0 +1,22 @@
+{
+  "experiment_id": "exp5_4_determinism_probe",
+  "status": "ready",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [16, 36, 103],
+  "seeds": [501],
+  "conditions": [
+    {
+      "name": "no_memory_probe_a",
+      "runtime_memory": ""
+    },
+    {
+      "name": "no_memory_probe_b",
+      "runtime_memory": ""
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10,
+  "log_level": "INFO"
+}
