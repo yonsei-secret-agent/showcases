@@ -1,0 +1,5 @@
+experiment_id,task_id,seed,condition,success,final_reward,db_reward,communicate_reward,nl_assertion_reward,gate_trigger_count,gate_failure_count,gate_retry_count,gate_final_passed,result_path
+exp6a_binding_smoke_user_stop,43,701,mismatched_money_gate,1,1.0000,1.0000,,1.0000,2,1,1,1,third_party/tau2-bench/data/simulations/exp6a_binding_smoke_user_stop/task_43/condition_mismatched_money_gate/seed_701/results.json
+exp6a_binding_smoke_user_stop,43,702,mismatched_money_gate,1,1.0000,1.0000,,1.0000,2,1,1,1,third_party/tau2-bench/data/simulations/exp6a_binding_smoke_user_stop/task_43/condition_mismatched_money_gate/seed_702/results.json
+exp6a_binding_smoke_user_stop,43,701,no_gate,0,0.0000,0.0000,,1.0000,0,0,0,,third_party/tau2-bench/data/simulations/exp6a_binding_smoke_user_stop/task_43/condition_no_gate/seed_701/results.json
+exp6a_binding_smoke_user_stop,43,702,no_gate,0,0.0000,0.0000,,1.0000,0,0,0,,third_party/tau2-bench/data/simulations/exp6a_binding_smoke_user_stop/task_43/condition_no_gate/seed_702/results.json

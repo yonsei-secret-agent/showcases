@@ -45,6 +45,46 @@ class CliTests(unittest.TestCase):
             self.assertTrue((out_dir / "task_stability.csv").exists())
             self.assertTrue((out_dir / "gate_condition_summary.csv").exists())
 
+    def test_summarize_command_accepts_baseline_condition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for condition, reward in [("no_gate", 0.0), ("oracle_gate", 1.0)]:
+                result_dir = root / "exp6" / "task_43" / f"condition_{condition}" / "seed_701"
+                result_dir.mkdir(parents=True)
+                (result_dir / "results.json").write_text(
+                    json.dumps(
+                        {
+                            "info": {"condition": condition},
+                            "simulations": [
+                                {
+                                    "id": f"sim-{condition}",
+                                    "task_id": "43",
+                                    "seed": 701,
+                                    "trial": 0,
+                                    "reward_info": {"reward": reward},
+                                    "messages": [],
+                                }
+                            ],
+                        }
+                    )
+                )
+            out_dir = root / "reports"
+
+            code = main(
+                [
+                    "summarize",
+                    str(root / "exp6"),
+                    "--out-dir",
+                    str(out_dir),
+                    "--baseline-condition",
+                    "no_gate",
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            text = (out_dir / "paired_condition_summary.csv").read_text()
+            self.assertIn("oracle_gate,1,0,1,1,0,1.0000", text)
+
     def test_run_binding_manifest_command_invokes_binding_runner(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

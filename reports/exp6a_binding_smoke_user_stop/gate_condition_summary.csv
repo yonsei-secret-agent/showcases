@@ -1,0 +1,3 @@
+condition,attempts,runs_with_gate_trigger,gate_trigger_rate,total_gate_triggers,total_gate_failures,total_gate_retries,final_gate_passes
+mismatched_money_gate,2,2,1.0000,4,2,2,2
+no_gate,2,0,0.0000,0,0,0,0

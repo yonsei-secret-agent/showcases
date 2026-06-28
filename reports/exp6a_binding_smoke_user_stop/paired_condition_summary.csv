@@ -1,0 +1,2 @@
+condition,paired_attempts,baseline_successes,condition_successes,paired_rescues,paired_regressions,success_delta,rescue_rate_among_baseline_failures,regression_rate_among_baseline_successes
+mismatched_money_gate,2,0,2,2,0,1.0000,1.0000,0.0000

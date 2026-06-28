@@ -139,10 +139,12 @@ setting.
 
 ## Intervention Timing
 
-The binding check should fire only at attempted finalization:
+The binding check should fire only when tau2 exposes an attempted
+finalization boundary:
 
 ```text
-agent returns an AssistantMessage with no tool calls
+the user simulator responds to the previous assistant message with a stop or
+transfer marker
 ```
 
 It should not fire:
@@ -162,22 +164,36 @@ final check after partial progress. Pre-finalization is the narrowest point that
 matches the observed mechanism while avoiding broad prompt contamination.
 ```
 
+Implementation note:
+
+```text
+An agent-side wrapper cannot reliably know whether an assistant text turn is
+final in tau2 half-duplex mode. The user simulator decides whether to stop on
+the next turn. Exp6 therefore uses a user-side wrapper: if the user simulator
+would stop after an assistant response, the wrapper evaluates the binding gate
+against that assistant response and, if needed, replaces the stop message with
+synthetic binding feedback.
+```
+
 ## Binding Mechanism
 
-For gated conditions, wrap the tau2 agent with a `BindingGateAgent`.
+For gated conditions, wrap the tau2 user simulator with a
+`BindingGateUserSimulator`.
 
 Behavior:
 
 ```text
-1. Generate the next assistant message normally.
-2. If the message contains tool calls, pass it through unchanged.
-3. If the message is a final user-facing response, run the configured gate.
-4. If the gate passes, pass the final response through.
-5. If the gate fails and the retry budget is unused, do not expose the final
-   response to the user. Instead append a synthetic feedback message and let
-   the agent continue.
-6. If the gate fails after the retry budget is used, pass the final response
-   through and record gate_failed_after_retry.
+1. Generate the agent and user turns normally.
+2. If the user simulator does not stop, pass the user response through
+   unchanged and do not evaluate the gate.
+3. If the user simulator would stop after an assistant response, treat the
+   previous assistant response as the attempted final response.
+4. Evaluate the configured gate against that attempted final response.
+5. If the gate passes, pass the user stop through.
+6. If the gate fails and the retry budget is unused, replace the user stop with
+   synthetic binding feedback so the agent must continue.
+7. If the gate fails after the retry budget is used, pass the user stop through
+   and record gate_failed_after_retry.
 ```
 
 Primary setting:
@@ -532,13 +548,45 @@ Success criteria:
 
 ```text
 1. no_gate reproduces normal tau2 execution
-2. gate triggers only on final responses
+2. gate triggers only when the user simulator would stop
 3. rejected final responses are not treated as user-visible final answers
 4. agent can continue after feedback
 5. official reward is still computed from the final transcript
 ```
 
 Do not interpret Phase 6A as research evidence.
+
+#### Exp6A Harness Smoke Result
+
+The first agent-side implementation failed the timing criterion: it treated
+every assistant text message without tool calls as final and therefore fired on
+greetings, identity-verification requests, and order-id clarification turns.
+
+The corrected implementation moved the gate to the user side. In the smoke
+rerun on task 43:
+
+```text
+no_gate:
+  0 / 2 success
+  0 gate triggers
+
+mismatched_money_gate with an intentionally task-irrelevant money-presence rule:
+  2 / 2 success
+  2 / 2 runs triggered the gate
+  each gated run had exactly one failed stop interception, one feedback retry,
+  and one subsequent gate pass
+```
+
+Interpretation:
+
+```text
+The binding harness is live and now fires at the intended user-stop boundary.
+The smoke gate was deliberately not a valid task-attribution gate. It happened
+to improve this tiny two-seed smoke by forcing an extra payment-detail response,
+but this is not research evidence. Exp6B/6C must use task-relevant audited
+gates, compare against proper controls, and report DB regression as a primary
+watch metric.
+```
 
 ### Phase 6B: Pool Harvest
 
@@ -836,13 +884,12 @@ prompt injection.
 Likely implementation path:
 
 ```text
-1. add BindingGateAgent subclass of LLMAgent
+1. add BindingGateUserSimulator subclass of UserSimulator
 2. override generate_next_message
-3. call the base generation
-4. if assistant message has tool_calls, return unchanged
-5. if assistant message is final text, evaluate gate
-6. if gate fails and retry remains, append synthetic feedback to state and
-   generate again
+3. call the base user simulation
+4. if user simulator does not stop, return unchanged
+5. if user simulator would stop, evaluate the previous assistant response
+6. if gate fails and retry remains, replace the stop with synthetic feedback
 7. log every gate decision in simulation info or sidecar report
 ```
 

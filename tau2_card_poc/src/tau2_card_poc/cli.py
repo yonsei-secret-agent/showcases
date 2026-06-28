@@ -37,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     summarize_parser.add_argument("experiment_dir")
     summarize_parser.add_argument("--out-dir", required=True)
     summarize_parser.add_argument("--default-condition", default="unknown")
+    summarize_parser.add_argument("--baseline-condition", default="no_memory")
 
     args = parser.parse_args(argv)
     if args.command == "run-manifest":
@@ -78,7 +79,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         write_condition_summary_csv(condition_summary(records), out_dir / "condition_summary.csv")
         write_paired_condition_summary_csv(
-            paired_condition_summary(records),
+            paired_condition_summary(
+                records,
+                baseline_condition=args.baseline_condition,
+            ),
             out_dir / "paired_condition_summary.csv",
         )
         write_per_run_outcomes_csv(records, out_dir / "per_run_outcomes.csv")

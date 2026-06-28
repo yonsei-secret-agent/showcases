@@ -1,0 +1,31 @@
+{
+  "experiment_id": "exp6a_binding_smoke_user_stop",
+  "status": "ready",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [43],
+  "seeds": [701, 702],
+  "conditions": [
+    {
+      "name": "no_gate",
+      "binding_gate": null
+    },
+    {
+      "name": "mismatched_money_gate",
+      "binding_gate": {
+        "name": "smoke_money_presence_gate",
+        "feedback": "Re-check the user's requested outcomes before finalizing.",
+        "rules": [
+          {
+            "kind": "money",
+            "description": "money amount"
+          }
+        ]
+      }
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10,
+  "log_level": "INFO"
+}

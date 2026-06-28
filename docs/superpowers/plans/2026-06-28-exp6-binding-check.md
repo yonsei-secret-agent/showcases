@@ -4,7 +4,9 @@
 
 **Goal:** Build and smoke-test Experiment 6, a tau2 dynamic finalization gate that compares no-gate, coarse binding, mode-only binding, oracle binding, and wrong binding interventions.
 
-**Architecture:** Keep the existing static `RuntimeMemoryAgent` path intact. Add a separate binding module with rule-based presence gates, a `BindingGateAgent` wrapper, a binding retry runner, and manifest support for binding experiments. Reporting should preserve existing Exp5 CSVs while adding gate metrics when gate metadata is present.
+**Architecture:** Keep the existing static `RuntimeMemoryAgent` path intact. Add a separate binding module with rule-based presence gates, a binding retry runner, and manifest support for binding experiments. Reporting should preserve existing Exp5 CSVs while adding gate metrics when gate metadata is present.
+
+**Revision after Exp6A smoke:** The initial `BindingGateAgent` design fired on every assistant text turn because tau2 half-duplex does not expose agent-side finality. The production run path now uses `BindingGateUserSimulator`, which intercepts only when the user simulator would emit a stop/transfer marker after an assistant response.
 
 **Tech Stack:** Python stdlib, tau2-bench local clone, `unittest`, existing `tau2_card_poc` manifest/runner/reporting structure.
 
@@ -111,7 +113,7 @@ git add tau2_card_poc/src/tau2_card_poc/binding_gates.py tau2_card_poc/tests/tes
 git commit -m "Add tau2 binding gate primitives"
 ```
 
-### Task 2: Add BindingGateAgent and Single-Run Path
+### Task 2: Add BindingGateUserSimulator and Single-Run Path
 
 **Files:**
 - Create: `tau2_card_poc/src/tau2_card_poc/binding_runner.py`
@@ -139,14 +141,14 @@ class BindingRetrySpec:
     log_level: str = "INFO"
 ```
 
-- [ ] **Step 2: Write tests for final-message interception**
+- [ ] **Step 2: Write tests for user-stop interception**
 
-Use a fake base generation sequence:
+Use a fake user generation sequence:
 
 ```python
-class FakeBindingAgent(BindingGateAgent):
+class FakeBindingUser(BindingGateUserSimulator):
     def __init__(self, responses, **kwargs):
-        super().__init__(tools=[], domain_policy="policy", llm="fake", binding_gate=kwargs["binding_gate"])
+        super().__init__(llm="fake", instructions="scenario", binding_gate=kwargs["binding_gate"])
         self.responses = list(responses)
 
     def _generate_next_message(self, message, state):
@@ -156,24 +158,25 @@ class FakeBindingAgent(BindingGateAgent):
 Assertions:
 
 ```text
-tool-call assistant messages pass through without gate evaluation
-final text messages are evaluated
-failed final text triggers one synthetic feedback turn
-second generated assistant message is returned
+ordinary user responses pass through without gate evaluation
+user stop responses trigger evaluation of the previous assistant message
+failed attempted final response replaces user stop with synthetic feedback
+passing attempted final response lets user stop pass through
 gate_events records triggered, passed, failed_rules, retry_used
 ```
 
-- [ ] **Step 3: Implement `BindingGateAgent`**
+- [ ] **Step 3: Implement `BindingGateUserSimulator`**
 
 Implementation rules:
 
 ```text
-subclass LLMAgent
+subclass UserSimulator
 override generate_next_message, not system_prompt
-call _generate_next_message directly so failed final response is not appended
-append synthetic UserMessage feedback to state.messages when gate fails
-call _generate_next_message again
-append only the returned visible assistant message to state.messages
+call _generate_next_message normally
+if generated user message is not a stop/transfer marker, return unchanged
+if generated user message would stop, evaluate the previous AssistantMessage
+replace failed stop with synthetic UserMessage feedback when retry remains
+let passing stop messages through unchanged
 record gate events on self.gate_events
 ```
 
@@ -182,7 +185,8 @@ record gate events on self.gate_events
 Mirror `run_single_memory_retry`, but:
 
 ```text
-register binding_gate_llm_agent_<condition>_<digest>
+register binding_gate_user_simulator_<condition>_<digest>
+use the normal llm_agent for agent generation
 store binding_gate_condition and binding_gate_events in simulation.info
 write standard results.json payload
 ```
@@ -385,18 +389,19 @@ tasks: [43]
 seeds: [701, 702]
 conditions:
   no_gate
-  coarse_binding_gate
+  mismatched_money_gate
 max_steps: 200
 max_errors: 10
 ```
 
-Use a permissive coarse gate for smoke:
+Use an intentionally task-irrelevant money gate for smoke so the rejection path
+is exercised:
 
 ```json
 {
-  "name": "coarse_nonempty_final_response",
+  "name": "smoke_money_presence_gate",
   "feedback": "Re-check the user's requested outcomes before finalizing.",
-  "rules": [{"kind": "any_text", "description": "non-empty final response"}]
+  "rules": [{"kind": "money", "description": "money amount"}]
 }
 ```
 
