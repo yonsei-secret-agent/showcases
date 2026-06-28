@@ -1,0 +1,7 @@
+condition,attempts,successes,success_rate,mean_reward
+always_continue_once_control,24,4,0.1667,0.1667
+coarse_binding_gate,24,10,0.4167,0.4167
+mode_only_binding_gate,24,11,0.4583,0.4583
+no_gate,24,2,0.0833,0.0833
+precise_attribution_binding_gate,24,15,0.6250,0.6250
+wrong_binding_gate,24,6,0.2500,0.2500

@@ -1,0 +1,7 @@
+condition,attempts,runs_with_gate_trigger,gate_trigger_rate,total_gate_triggers,total_gate_failures,total_gate_retries,final_gate_passes
+always_continue_once_control,24,24,1.0000,48,48,24,0
+coarse_binding_gate,17,17,1.0000,29,12,12,17
+mode_only_binding_gate,16,16,1.0000,30,17,14,13
+no_gate,24,0,0.0000,0,0,0,0
+precise_attribution_binding_gate,16,16,1.0000,32,20,16,12
+wrong_binding_gate,16,16,1.0000,30,22,14,8

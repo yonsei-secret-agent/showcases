@@ -1,0 +1,16 @@
+condition_a,condition_b,paired_attempts,condition_a_successes,condition_b_successes,a_beats_b,b_beats_a,ties_success,ties_failure,success_delta_a_minus_b
+always_continue_once_control,coarse_binding_gate,17,4,8,2,6,2,7,-0.2353
+always_continue_once_control,mode_only_binding_gate,16,4,5,2,3,2,9,-0.0625
+always_continue_once_control,no_gate,24,4,2,4,2,0,18,0.0833
+always_continue_once_control,precise_attribution_binding_gate,16,4,8,2,6,2,6,-0.2500
+always_continue_once_control,wrong_binding_gate,16,4,5,0,1,4,11,-0.0625
+coarse_binding_gate,mode_only_binding_gate,16,8,5,5,2,3,6,0.1875
+coarse_binding_gate,no_gate,17,8,2,6,0,2,9,0.3529
+coarse_binding_gate,precise_attribution_binding_gate,16,8,8,5,5,3,3,0.0000
+coarse_binding_gate,wrong_binding_gate,16,8,5,5,2,3,6,0.1875
+mode_only_binding_gate,no_gate,16,5,2,5,2,0,9,0.1875
+mode_only_binding_gate,precise_attribution_binding_gate,16,5,8,2,5,3,6,-0.1875
+mode_only_binding_gate,wrong_binding_gate,16,5,5,3,3,2,8,0.0000
+no_gate,precise_attribution_binding_gate,16,2,8,1,7,1,7,-0.3750
+no_gate,wrong_binding_gate,16,2,5,1,4,1,10,-0.1875
+precise_attribution_binding_gate,wrong_binding_gate,16,8,5,6,3,2,5,0.1875

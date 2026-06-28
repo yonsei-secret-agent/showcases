@@ -1,0 +1,6 @@
+condition,paired_attempts,baseline_successes,condition_successes,paired_rescues,paired_regressions,success_delta,rescue_rate_among_baseline_failures,regression_rate_among_baseline_successes
+always_continue_once_control,24,2,4,4,2,0.0833,0.1818,1.0000
+coarse_binding_gate,24,2,10,8,0,0.3333,0.3636,0.0000
+mode_only_binding_gate,24,2,11,11,2,0.3750,0.5000,1.0000
+precise_attribution_binding_gate,24,2,15,14,1,0.5417,0.6364,0.5000
+wrong_binding_gate,24,2,6,5,1,0.1667,0.2273,0.5000

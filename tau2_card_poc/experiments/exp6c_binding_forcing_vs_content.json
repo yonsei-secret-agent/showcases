@@ -1,0 +1,199 @@
+{
+  "experiment_id": "exp6c_binding_forcing_vs_content",
+  "status": "ready",
+  "domain": "retail",
+  "agent_model": "gpt-4.1-mini",
+  "user_model": "gpt-4.1-mini",
+  "task_ids": [19, 36, 95],
+  "seeds": [901, 902, 903, 904, 905, 906, 907, 908],
+  "conditions": [
+    {
+      "name": "no_gate",
+      "binding_gate": null
+    },
+    {
+      "name": "always_continue_once_control",
+      "binding_gate": {
+        "name": "forced_extra_turn_control",
+        "feedback": "Before ending, take one more turn to re-check whether every requested outcome has been addressed. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+        "rules": [
+          {
+            "kind": "keyword",
+            "description": "generic final review",
+            "keywords": ["__force_once_control_never_present__"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "coarse_binding_gate",
+      "binding_gate": null,
+      "per_task_binding_gate": {
+        "19": {
+          "name": "coarse_money_summary_gate",
+          "feedback": "Before ending, include the requested financial result in the final response. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "money amount"
+            }
+          ]
+        },
+        "36": {
+          "name": "coarse_money_summary_gate",
+          "feedback": "Before ending, include the requested item price or financial result in the final response. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "money amount"
+            }
+          ]
+        },
+        "95": {
+          "name": "coarse_money_summary_gate",
+          "feedback": "Before ending, include the requested financial result in the final response. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "money amount"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mode_only_binding_gate",
+      "binding_gate": null,
+      "per_task_binding_gate": {
+        "19": {
+          "name": "mode_total_financial_summary_gate",
+          "feedback": "Before ending, include the relevant refund/savings amounts in the final response. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "at least two money amounts",
+              "min_count": 2
+            }
+          ]
+        },
+        "36": {
+          "name": "mode_comparison_price_gate",
+          "feedback": "Before ending, explicitly state the comparison result and the relevant item price. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "comparison",
+              "description": "comparison wording"
+            },
+            {
+              "kind": "money",
+              "description": "item price"
+            }
+          ]
+        },
+        "95": {
+          "name": "mode_total_financial_summary_gate",
+          "feedback": "Before ending, include the relevant exchange payment or refund amounts in the final response. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "at least two money amounts",
+              "min_count": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "precise_attribution_binding_gate",
+      "binding_gate": null,
+      "per_task_binding_gate": {
+        "19": {
+          "name": "precise_refund_and_exchange_savings_gate",
+          "feedback": "Before ending, include both the return refund amount and the combined total savings for the exchange option. Do not provide only separate item amounts. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "at least two money amounts",
+              "min_count": 2
+            },
+            {
+              "kind": "keyword",
+              "description": "combined total savings wording",
+              "keywords": ["total savings", "total save", "saves"]
+            }
+          ]
+        },
+        "36": {
+          "name": "precise_original_most_expensive_item_gate",
+          "feedback": "Before ending, explicitly identify the original order's most expensive item and its original price, then preserve the completed order change if it was already done. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "keyword",
+              "description": "explicit most-expensive wording",
+              "keywords": ["most expensive", "highest-priced", "highest priced"]
+            },
+            {
+              "kind": "money",
+              "description": "item price"
+            }
+          ]
+        },
+        "95": {
+          "name": "precise_two_exchange_price_breakdown_gate",
+          "feedback": "Before ending, include each laptop exchange price difference and the total amount due or refunded today. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "money",
+              "description": "three money amounts",
+              "min_count": 3
+            },
+            {
+              "kind": "keyword",
+              "description": "total amount wording",
+              "keywords": ["total", "today"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "wrong_binding_gate",
+      "binding_gate": null,
+      "per_task_binding_gate": {
+        "19": {
+          "name": "wrong_tracking_gate",
+          "feedback": "Before ending, include a tracking number for the order if one is available from the records. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "tracking",
+              "description": "numeric tracking number"
+            }
+          ]
+        },
+        "36": {
+          "name": "wrong_tracking_gate",
+          "feedback": "Before ending, include a tracking number for the order if one is available from the records. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "tracking",
+              "description": "numeric tracking number"
+            }
+          ]
+        },
+        "95": {
+          "name": "wrong_tracking_gate",
+          "feedback": "Before ending, include a tracking number for the order if one is available from the records. Use already gathered evidence when possible. Do not change completed records unless a required action is still incomplete.",
+          "rules": [
+            {
+              "kind": "tracking",
+              "description": "numeric tracking number"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "max_steps": 200,
+  "max_errors": 10,
+  "log_level": "INFO"
+}
